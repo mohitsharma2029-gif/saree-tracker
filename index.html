@@ -992,6 +992,19 @@ function getPhotos(e){
   if(e.photoUrl) return [e.photoUrl]; // backward compat with older single-photo entries
   return [];
 }
+async function removeEntryPhoto(id, index){
+  const e = allEntries.find(x=>x.id===id);
+  if(!e) return;
+  const photos = getPhotos(e);
+  const ok = confirm("Remove this photo?");
+  if(!ok) return;
+  const updated = photos.filter((_,i)=>i!==index);
+  await db.collection(COLLECTION).doc(id).update({
+    photoUrls: updated,
+    photoUrl: null // clear the old single-photo field too, in case this entry predates the array format
+  });
+  toast("Photo removed");
+}
 function triggerPhotoUpload(id){
   photoEditEntryId = id;
   document.getElementById("entry-photo-input").click();
@@ -1139,7 +1152,12 @@ function renderEntries(){
           ${e.deliveryMethod ? `<br>Delivery: <span>${e.deliveryMethod}</span>` : ''}
         </div>
         ${creditLineHtml(e)}
-        ${getPhotos(e).length ? `<div class="entry-photos">${getPhotos(e).map(url=>`<img src="${url}" onclick="openLightbox('${url}')">`).join('')}</div>` : ''}
+        ${getPhotos(e).length ? `<div class="entry-photos">${getPhotos(e).map((url,i)=>`
+          <div style="position:relative;">
+            <img src="${url}" onclick="openLightbox('${url}')">
+            ${(isAdmin || e.salesmanEmail === currentUserEmail || !e.salesmanEmail) ? `<button onclick="removeEntryPhoto('${e.id}', ${i})" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--overdue);color:#fff;border:none;font-size:0.7rem;cursor:pointer;line-height:1;padding:0;">✕</button>` : ''}
+          </div>
+        `).join('')}</div>` : ''}
         <div class="entry-actions">
           ${!e.salesmanEmail && !isAdmin
             ? `<button class="primary" onclick="claimEntry('${e.id}')">This one is mine</button><button onclick="triggerPhotoUpload('${e.id}')">📷 Add Photo (${getPhotos(e).length}/3)</button>`
