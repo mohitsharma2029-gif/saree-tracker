@@ -622,7 +622,7 @@
     </div>
     <div class="card">
       <label style="margin-top:0;">📊 Full Report — one consolidated message</label>
-      <div class="hint" style="margin-bottom:10px;">Pick a salesman above, then send them one WhatsApp message listing every one of their active (not yet delivered) invoices.</div>
+      <div class="hint" style="margin-bottom:10px;">Pick a salesman above — one WhatsApp message with 3 clear sections: sold today (not sent for finishing), not packed 2-3 days, and 🔴 critical (3+ days).</div>
       <div id="full-report-preview"></div>
       <div id="full-report-send"></div>
     </div>
@@ -1183,35 +1183,55 @@ function renderAlertsPanel(){
     }).join('');
   }
 
-  // Section 3: full consolidated report for the selected salesman
+  // Section 3: full consolidated report for the selected salesman -- split into 3 parts
   const reportPreview = document.getElementById("full-report-preview");
   const reportSend = document.getElementById("full-report-send");
   if(!selectedSalesman){
     reportPreview.innerHTML = `<div class="hint">Select a salesman above to build their report.</div>`;
     reportSend.innerHTML = '';
   } else {
-    const theirInvoices = allEntries
-      .filter(e => e.salesman === selectedSalesman && e.status !== "Delivered")
-      .sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
+    const theirActive = allEntries.filter(e => e.salesman === selectedSalesman && e.status !== "Delivered");
 
-    if(theirInvoices.length === 0){
-      reportPreview.innerHTML = `<div class="empty" style="padding:16px;">${escapeHtml(selectedSalesman)} has no active (non-delivered) invoices right now.</div>`;
+    const part1 = theirActive.filter(e => e.saleDate === todayStr && e.status === "Sold");
+    const part2 = theirActive.filter(e => isOverdue(e) && !isCritical(e));
+    const part3 = theirActive.filter(e => isCritical(e));
+
+    const total = part1.length + part2.length + part3.length;
+
+    if(total === 0){
+      reportPreview.innerHTML = `<div class="empty" style="padding:16px;">${escapeHtml(selectedSalesman)} has nothing pending right now 🎉</div>`;
       reportSend.innerHTML = '';
     } else {
-      const lines = theirInvoices.map((e,i)=>
-        `${i+1}. Inv #${e.invoice} — ${itemsSummaryPlain(e)} — ${e.status}${e.customer ? ' — '+e.customer : ''}`
-      );
-      const fullMsg = `📊 BhabhiSarees — Report for ${selectedSalesman}\n(${theirInvoices.length} active invoice${theirInvoices.length===1?'':'s'})\n\n${lines.join('\n')}`;
+      const lineFor = e => `Inv #${e.invoice} — ${itemsSummaryPlain(e)}${e.customer ? ' — '+e.customer : ''}`;
 
-      reportPreview.innerHTML = `
-        <div class="hint" style="margin-bottom:8px;">${theirInvoices.length} active invoice(s) will be included:</div>
-        <div style="max-height:200px;overflow-y:auto;font-size:0.82rem;background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:10px;">
-          ${theirInvoices.map(e=>`Inv #${escapeHtml(e.invoice)} — ${escapeHtml(itemsSummaryPlain(e))} — <b>${e.status}</b><br>`).join('')}
-        </div>`;
+      const msgParts = [];
+      msgParts.push(`📊 BhabhiSarees — Report for ${selectedSalesman}`);
+
+      if(part1.length){
+        msgParts.push(`\n1️⃣ SOLD TODAY — NOT YET SENT FOR FINISHING (${part1.length}):\n` + part1.map(lineFor).join('\n'));
+      }
+      if(part2.length){
+        msgParts.push(`\n2️⃣ NOT PACKED (2-3 DAYS) (${part2.length}):\n` + part2.map(e=>`${lineFor(e)} — ${daysAgo(e.saleDate)}d`).join('\n'));
+      }
+      if(part3.length){
+        msgParts.push(`\n3️⃣ 🔴 CRITICAL — NOT PACKED 3+ DAYS (${part3.length}):\n` + part3.map(e=>`${lineFor(e)} — ${daysAgo(e.saleDate)}d`).join('\n'));
+      }
+      const fullMsg = msgParts.join('\n');
+
+      const previewSection = (title, list, color) => list.length ? `
+        <div style="font-weight:700;color:${color};margin:10px 0 4px;">${title} (${list.length})</div>
+        <div style="font-size:0.82rem;background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:8px 10px;">
+          ${list.map(e=>`Inv #${escapeHtml(e.invoice)} — ${escapeHtml(itemsSummaryPlain(e))}<br>`).join('')}
+        </div>` : '';
+
+      reportPreview.innerHTML =
+        previewSection("1️⃣ Sold today, not sent for finishing", part1, "var(--ink)") +
+        previewSection("2️⃣ Not packed (2-3 days)", part2, "var(--overdue)") +
+        previewSection("3️⃣ 🔴 Critical (3+ days)", part3, "var(--critical)");
 
       const link = whatsappLink(selectedSalesman, fullMsg);
       reportSend.innerHTML = link
-        ? `<a href="${link}" target="_blank" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">📊 Send Full Report to ${escapeHtml(selectedSalesman)}</a>`
+        ? `<a href="${link}" target="_blank" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">📊 Send Full Report to ${escapeHtml(selectedSalesman)} (${total} item${total===1?'':'s'})</a>`
         : `<div style="color:var(--overdue);font-size:0.8rem;margin-top:8px;">No phone number saved for ${escapeHtml(selectedSalesman)}</div>`;
     }
   }
