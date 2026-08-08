@@ -518,6 +518,7 @@
     <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
     <button class="tab-btn" data-tab="new">+ New Sale</button>
     <button class="tab-btn" data-tab="alerts" id="alerts-tab-btn" style="display:none;">📢 Alerts</button>
+    <button class="tab-btn" data-tab="customer" id="customer-tab-btn" style="display:none;">💌 Customer</button>
   </div>
 
   <!-- NEW SALE PANEL -->
@@ -626,6 +627,10 @@
       <div id="full-report-preview"></div>
       <div id="full-report-send"></div>
     </div>
+  </div>
+
+  <!-- CUSTOMER MESSAGES PANEL (Owner only) -->
+  <div class="panel" id="panel-customer">
     <div class="card">
       <label style="margin-top:0;">📦 Ready for Delivery — message the customer</label>
       <div class="hint" style="margin-bottom:10px;">Packed sarees where the customer's phone number was saved — let them know it's ready.</div>
@@ -709,6 +714,7 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
     document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
     if(btn.dataset.tab === "dashboard") renderEntries();
     if(btn.dataset.tab === "alerts") renderAlertsPanel();
+    if(btn.dataset.tab === "customer") renderCustomerPanel();
   });
 });
 
@@ -806,6 +812,7 @@ auth.onAuthStateChanged(user=>{
       ? "Signed in as Owner — viewing all salesmen"
       : "Signed in as " + currentSalesmanName;
     document.getElementById("alerts-tab-btn").style.display = isAdmin ? "" : "none";
+    document.getElementById("customer-tab-btn").style.display = isAdmin ? "" : "none";
 
     // Lock or show salesman field on New Sale form
     const dropdown = document.getElementById("f-salesman");
@@ -1257,8 +1264,10 @@ function renderAlertsPanel(){
         : `<div style="color:var(--overdue);font-size:0.8rem;margin-top:8px;">No phone number saved for ${escapeHtml(selectedSalesman)}</div>`;
     }
   }
+}
 
-  // Section 4: Ready for Delivery -- message the customer directly
+function renderCustomerPanel(){
+  // Ready for Delivery -- message the customer directly
   const readyForDelivery = allEntries.filter(e => e.status === "Packed" && e.phone);
   const readyList = document.getElementById("ready-list");
   if(readyForDelivery.length === 0){
@@ -1280,7 +1289,7 @@ function renderAlertsPanel(){
     }).join('');
   }
 
-  // Section 5: Thank You -- message the customer directly
+  // Thank You -- message the customer directly
   const delivered = allEntries.filter(e => e.status === "Delivered" && e.phone);
   const thankyouList = document.getElementById("thankyou-list");
   if(delivered.length === 0){
