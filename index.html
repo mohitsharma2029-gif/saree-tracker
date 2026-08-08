@@ -412,6 +412,34 @@
     font-size:0.95rem;
     font-weight:600;
   }
+  .entry-photos img{cursor:pointer;}
+  #photo-lightbox{
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(20,12,8,0.92);
+    z-index:200;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    cursor:zoom-out;
+  }
+  #photo-lightbox.show{display:flex;}
+  #photo-lightbox img{
+    max-width:100%;
+    max-height:90vh;
+    border-radius:8px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.5);
+  }
+  #photo-lightbox .lightbox-close{
+    position:absolute;
+    top:16px; right:20px;
+    color:#fff;
+    font-size:2rem;
+    font-weight:300;
+    cursor:pointer;
+    line-height:1;
+  }
 </style>
 </head>
 <body>
@@ -539,6 +567,10 @@
 </div><!-- /app-content -->
 
 <div id="toast"></div>
+<div id="photo-lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+  <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+</div>
 <input type="file" id="entry-photo-input" accept="image/*" capture="environment" style="display:none;">
 
 <script>
@@ -740,7 +772,7 @@ document.getElementById("f-photo").addEventListener("change", async (e)=>{
     const data = await res.json();
     if(data.secure_url){
       pendingPhotoUrl = data.secure_url;
-      document.getElementById("photo-preview").innerHTML = `<img src="${data.secure_url}">`;
+      document.getElementById("photo-preview").innerHTML = `<img src="${data.secure_url}" onclick="openLightbox('${data.secure_url}')">`;
       statusEl.textContent = "Photo uploaded ✓";
     } else {
       statusEl.textContent = "Upload failed — check Cloudinary setup.";
@@ -935,15 +967,15 @@ function renderEntries(){
     filtered = allEntries.filter(e=>e.status === currentFilter);
   }
 
-  // critical-first, then overdue, within view
+  // Always newest-first: sale date, then invoice number as tiebreaker
+  // (critical/overdue items are still highlighted visually and have their
+  // own filter chips -- they just don't jump the queue in the main list)
   filtered = [...filtered].sort((a,b)=>{
-    const ac = isCritical(a), bc = isCritical(b);
-    if(ac && !bc) return -1;
-    if(!ac && bc) return 1;
-    const ao = isOverdue(a), bo = isOverdue(b);
-    if(ao && !bo) return -1;
-    if(!ao && bo) return 1;
-    return new Date(b.saleDate) - new Date(a.saleDate);
+    const dateDiff = new Date(b.saleDate) - new Date(a.saleDate);
+    if(dateDiff !== 0) return dateDiff;
+    const invA = parseInt(a.invoice) || 0;
+    const invB = parseInt(b.invoice) || 0;
+    return invB - invA;
   });
 
   // stats
@@ -987,7 +1019,7 @@ function renderEntries(){
           ${e.deliveryMethod ? `<br>Delivery: <span>${e.deliveryMethod}</span>` : ''}
         </div>
         ${creditLineHtml(e)}
-        ${e.photoUrl ? `<div class="entry-photos"><img src="${e.photoUrl}"></div>` : ''}
+        ${e.photoUrl ? `<div class="entry-photos"><img src="${e.photoUrl}" onclick="openLightbox('${e.photoUrl}')"></div>` : ''}
         <div class="entry-actions">
           ${!e.salesmanEmail && !isAdmin
             ? `<button class="primary" onclick="claimEntry('${e.id}')">This one is mine</button><button onclick="triggerPhotoUpload('${e.id}')">${e.photoUrl ? 'Change Photo' : '📷 Add Photo'}</button>`
@@ -1061,6 +1093,13 @@ function escapeHtml(str){
   const d = document.createElement("div");
   d.textContent = str || "";
   return d.innerHTML;
+}
+function openLightbox(url){
+  document.getElementById("lightbox-img").src = url;
+  document.getElementById("photo-lightbox").classList.add("show");
+}
+function closeLightbox(){
+  document.getElementById("photo-lightbox").classList.remove("show");
 }
 function itemsSummary(e){
   const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : ["Unknown item"]);
