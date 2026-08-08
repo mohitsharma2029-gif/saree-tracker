@@ -478,12 +478,12 @@
 
 <div class="wrap">
   <div class="tabs">
-    <button class="tab-btn active" data-tab="new">+ New Sale</button>
-    <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="new">+ New Sale</button>
   </div>
 
   <!-- NEW SALE PANEL -->
-  <div class="panel active" id="panel-new">
+  <div class="panel" id="panel-new">
     <div class="card">
       <label>Invoice Number *</label>
       <input type="text" id="f-invoice" placeholder="e.g. INV-1042">
@@ -542,7 +542,7 @@
   </div>
 
   <!-- DASHBOARD PANEL -->
-  <div class="panel" id="panel-dashboard">
+  <div class="panel active" id="panel-dashboard">
     <div class="summary-bar">
       <div class="stat"><div class="num" id="stat-total">0</div><div class="lbl">Total Active</div></div>
       <div class="stat stat-overdue"><div class="num" id="stat-overdue">0</div><div class="lbl">Overdue</div></div>
