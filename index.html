@@ -623,6 +623,7 @@
 <div id="photo-lightbox" onclick="closeLightbox()">
   <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
   <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+  <button id="lightbox-remove-btn" onclick="event.stopPropagation(); removeCurrentLightboxPhoto()" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--overdue);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">🗑 Remove This Photo</button>
 </div>
 <input type="file" id="entry-photo-input" accept="image/*" multiple style="display:none;">
 
@@ -1240,12 +1241,10 @@ function renderEntries(){
           ${e.deliveryMethod ? `<br>Delivery: <span>${e.deliveryMethod}</span>` : ''}
         </div>
         ${creditLineHtml(e)}
-        ${getPhotos(e).length ? `<div class="entry-photos">${getPhotos(e).map((url,i)=>`
-          <div style="position:relative;">
-            <img src="${url}" onclick="openLightbox('${url}')">
-            ${(isAdmin || e.salesmanEmail === currentUserEmail || !e.salesmanEmail) ? `<button onclick="removeEntryPhoto('${e.id}', ${i})" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--overdue);color:#fff;border:none;font-size:0.7rem;cursor:pointer;line-height:1;padding:0;">✕</button>` : ''}
-          </div>
-        `).join('')}</div>` : ''}
+        ${getPhotos(e).length ? `<div class="entry-photos">${getPhotos(e).map((url,i)=>{
+          const canRemove = (isAdmin || e.salesmanEmail === currentUserEmail || !e.salesmanEmail);
+          return `<img src="${url}" onclick="openLightbox('${url}', '${e.id}', ${i}, ${canRemove})">`;
+        }).join('')}</div>` : ''}
         <div class="entry-actions">
           ${!e.salesmanEmail && !isAdmin
             ? `<button class="primary" onclick="claimEntry('${e.id}')">This one is mine</button><button onclick="triggerPhotoUpload('${e.id}')">📷 Add Photo (${getPhotos(e).length}/3)</button>`
@@ -1364,12 +1363,25 @@ function escapeHtml(str){
   d.textContent = str || "";
   return d.innerHTML;
 }
-function openLightbox(url){
+let lightboxEntryId = null;
+let lightboxIndex = null;
+function openLightbox(url, entryId, index, canRemove){
   document.getElementById("lightbox-img").src = url;
   document.getElementById("photo-lightbox").classList.add("show");
+  lightboxEntryId = entryId || null;
+  lightboxIndex = (index !== undefined) ? index : null;
+  document.getElementById("lightbox-remove-btn").style.display =
+    (canRemove && lightboxEntryId !== null) ? "block" : "none";
 }
 function closeLightbox(){
   document.getElementById("photo-lightbox").classList.remove("show");
+  lightboxEntryId = null;
+  lightboxIndex = null;
+}
+async function removeCurrentLightboxPhoto(){
+  if(lightboxEntryId === null || lightboxIndex === null) return;
+  await removeEntryPhoto(lightboxEntryId, lightboxIndex);
+  closeLightbox();
 }
 function itemsSummary(e){
   const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : ["Unknown item"]);
