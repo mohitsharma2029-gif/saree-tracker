@@ -626,6 +626,16 @@
       <div id="full-report-preview"></div>
       <div id="full-report-send"></div>
     </div>
+    <div class="card">
+      <label style="margin-top:0;">📦 Ready for Delivery — message the customer</label>
+      <div class="hint" style="margin-bottom:10px;">Packed sarees where the customer's phone number was saved — let them know it's ready.</div>
+      <div id="ready-list"></div>
+    </div>
+    <div class="card">
+      <label style="margin-top:0;">🙏 Thank You — message the customer</label>
+      <div class="hint" style="margin-bottom:10px;">Delivered sarees where the customer's phone number was saved — send a thank-you note.</div>
+      <div id="thankyou-list"></div>
+    </div>
   </div>
 </div>
 
@@ -1120,6 +1130,18 @@ function whatsappLink(salesmanName, message){
   if(!phone) return null;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
+function customerWhatsappLink(rawPhone, message){
+  if(!rawPhone) return null;
+  let digits = rawPhone.replace(/\D/g, "");
+  if(digits.length === 10){
+    digits = "91" + digits;
+  } else if(digits.length === 11 && digits.startsWith("0")){
+    digits = "91" + digits.slice(1);
+  } else if(digits.length < 10){
+    return null; // too short to be a real number
+  }
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
 
 function renderAlertsPanel(){
   const todayStr = new Date().toISOString().slice(0,10);
@@ -1234,6 +1256,50 @@ function renderAlertsPanel(){
         ? `<a href="${link}" target="_blank" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">📊 Send Full Report to ${escapeHtml(selectedSalesman)} (${total} item${total===1?'':'s'})</a>`
         : `<div style="color:var(--overdue);font-size:0.8rem;margin-top:8px;">No phone number saved for ${escapeHtml(selectedSalesman)}</div>`;
     }
+  }
+
+  // Section 4: Ready for Delivery -- message the customer directly
+  const readyForDelivery = allEntries.filter(e => e.status === "Packed" && e.phone);
+  const readyList = document.getElementById("ready-list");
+  if(readyForDelivery.length === 0){
+    readyList.innerHTML = `<div class="empty" style="padding:16px;">No packed sarees with a saved customer number right now.</div>`;
+  } else {
+    readyList.innerHTML = readyForDelivery.map(e=>{
+      const itemText = itemsSummaryPlain(e);
+      const msg = `Hi ${e.customer || ''}, good news from BhabhiSarees! Your saree (Invoice #${e.invoice}, ${itemText}) is ready. Please let us know when you'd like to collect it or if you'd like it sent via porter. Thank you!`;
+      const link = customerWhatsappLink(e.phone, msg);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
+          <div>
+            <div style="font-weight:700;">${escapeHtml(e.customer || 'Customer')} — Invoice #${escapeHtml(e.invoice)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)} · ${escapeHtml(e.phone)}</div>
+          </div>
+          ${link ? `<a href="${link}" target="_blank" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;padding:8px 14px;">📦 Send</a>`
+                 : `<span style="font-size:0.75rem;color:var(--overdue);">Invalid number</span>`}
+        </div>`;
+    }).join('');
+  }
+
+  // Section 5: Thank You -- message the customer directly
+  const delivered = allEntries.filter(e => e.status === "Delivered" && e.phone);
+  const thankyouList = document.getElementById("thankyou-list");
+  if(delivered.length === 0){
+    thankyouList.innerHTML = `<div class="empty" style="padding:16px;">No delivered sarees with a saved customer number right now.</div>`;
+  } else {
+    thankyouList.innerHTML = delivered.map(e=>{
+      const itemText = itemsSummaryPlain(e);
+      const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We look forward to serving you again soon. 🙏`;
+      const link = customerWhatsappLink(e.phone, msg);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
+          <div>
+            <div style="font-weight:700;">${escapeHtml(e.customer || 'Customer')} — Invoice #${escapeHtml(e.invoice)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)} · ${escapeHtml(e.phone)}</div>
+          </div>
+          ${link ? `<a href="${link}" target="_blank" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;padding:8px 14px;">🙏 Send</a>`
+                 : `<span style="font-size:0.75rem;color:var(--overdue);">Invalid number</span>`}
+        </div>`;
+    }).join('');
   }
 }
 
