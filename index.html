@@ -549,6 +549,7 @@
       <div class="stat stat-overdue"><div class="num" id="stat-critical" style="color:var(--critical);">0</div><div class="lbl">🔴 Critical</div></div>
       <div class="stat"><div class="num" id="stat-today">0</div><div class="lbl">Sold Today</div></div>
     </div>
+    <input type="text" id="entry-search" placeholder="🔍 Search by invoice number or customer name" style="margin-bottom:12px;">
     <div class="filters" id="status-filters">
       <div class="chip active" data-filter="all">All</div>
       <div class="chip" data-filter="critical">🔴 3+ Days</div>
@@ -609,6 +610,7 @@ const DEFAULT_STAFF = ["Jitu","Vicky","Hitesh","Chotu","Manish","Purab"];
 
 let allEntries = [];
 let currentFilter = "all";
+let searchQuery = "";
 let pendingPhotoUrl = null;
 let currentUserEmail = null;
 let currentSalesmanName = null;
@@ -800,12 +802,26 @@ document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
     return;
   }
 
+  // Prevent duplicate invoice numbers -- never silently overwrite an existing entry
+  const btn = document.getElementById("btn-save-sale");
+  btn.disabled = true; btn.textContent = "Checking invoice...";
+  try{
+    const dupCheck = await db.collection(COLLECTION).where("invoice","==",invoice).limit(1).get();
+    if(!dupCheck.empty){
+      const existing = dupCheck.docs[0].data();
+      toast(`Invoice #${invoice} already exists (${existing.salesman || 'Unclaimed'}) — use a different number or edit that entry instead`);
+      btn.disabled = false; btn.textContent = "Save Sale";
+      return;
+    }
+  } catch(err){
+    console.error(err);
+  }
+
   // salesmanEmail: which login this sale belongs to, for access control.
   // Admin picking a salesman from the dropdown still tags it to that salesman's own login.
   const salesmanEmail = isAdmin ? (salesman.toLowerCase() + EMAIL_DOMAIN) : currentUserEmail;
 
-  const btn = document.getElementById("btn-save-sale");
-  btn.disabled = true; btn.textContent = "Saving...";
+  btn.textContent = "Saving...";
 
   try{
     await db.collection(COLLECTION).add({
@@ -847,6 +863,11 @@ document.getElementById("status-filters").addEventListener("click", (e)=>{
   document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
   e.target.classList.add("active");
   currentFilter = e.target.dataset.filter;
+  renderEntries();
+});
+
+document.getElementById("entry-search").addEventListener("input", (e)=>{
+  searchQuery = e.target.value.trim().toLowerCase();
   renderEntries();
 });
 
@@ -965,6 +986,14 @@ function renderEntries(){
     filtered = allEntries.filter(e=>e.creditAmount && e.creditAmount > 0);
   } else if(currentFilter !== "all"){
     filtered = allEntries.filter(e=>e.status === currentFilter);
+  }
+
+  if(searchQuery){
+    filtered = filtered.filter(e=>{
+      const invoiceMatch = (e.invoice || "").toLowerCase().includes(searchQuery);
+      const customerMatch = (e.customer || "").toLowerCase().includes(searchQuery);
+      return invoiceMatch || customerMatch;
+    });
   }
 
   // Always newest-first: sale date, then invoice number as tiebreaker
