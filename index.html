@@ -1273,10 +1273,12 @@ function renderCustomerPanel(){
   if(readyForDelivery.length === 0){
     readyList.innerHTML = `<div class="empty" style="padding:16px;">No packed sarees with a saved customer number right now.</div>`;
   } else {
-    readyList.innerHTML = readyForDelivery.map(e=>{
+    const readyLinks = [];
+    const rows = readyForDelivery.map(e=>{
       const itemText = itemsSummaryPlain(e);
       const msg = `Hi ${e.customer || ''}, good news from BhabhiSarees! Your saree (Invoice #${e.invoice}, ${itemText}) is ready. Please let us know when you'd like to collect it or if you'd like it sent via porter. Thank you!`;
       const link = customerWhatsappLink(e.phone, msg);
+      if(link) readyLinks.push(link);
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
           <div>
@@ -1287,6 +1289,11 @@ function renderCustomerPanel(){
                  : `<span style="font-size:0.75rem;color:var(--overdue);">Invalid number</span>`}
         </div>`;
     }).join('');
+    readyList.innerHTML = `
+      <button onclick='openAllLinks(${JSON.stringify(readyLinks)})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
+        📦 Open All ${readyLinks.length} — one tap Send in each
+      </button>
+      ${rows}`;
   }
 
   // Thank You -- goes out right after a purchase, any status, not just Delivered
@@ -1297,10 +1304,12 @@ function renderCustomerPanel(){
   if(thankable.length === 0){
     thankyouList.innerHTML = `<div class="empty" style="padding:16px;">No sales with a saved customer number right now.</div>`;
   } else {
-    thankyouList.innerHTML = thankable.map(e=>{
+    const thankLinks = [];
+    const rows = thankable.map(e=>{
       const itemText = itemsSummaryPlain(e);
       const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! 🙏 We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We'd love to hear how we did — please reply and let us know how you'd rate your experience (⭐ out of 5). We look forward to serving you again soon!`;
       const link = customerWhatsappLink(e.phone, msg);
+      if(link) thankLinks.push(link);
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
           <div>
@@ -1311,7 +1320,23 @@ function renderCustomerPanel(){
                  : `<span style="font-size:0.75rem;color:var(--overdue);">Invalid number</span>`}
         </div>`;
     }).join('');
+    thankyouList.innerHTML = `
+      <button onclick='openAllLinks(${JSON.stringify(thankLinks)})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
+        🙏 Open All ${thankLinks.length} — one tap Send in each
+      </button>
+      ${rows}`;
   }
+}
+
+// Opens a list of WhatsApp links one after another, spaced out so the
+// browser's popup blocker doesn't block them. Each still needs one tap
+// on Send inside WhatsApp itself -- that step can't be automated.
+function openAllLinks(links){
+  if(!links || links.length === 0) return;
+  toast(`Opening ${links.length} WhatsApp chat${links.length===1?'':'s'}... allow popups if your browser asks`);
+  links.forEach((link, i)=>{
+    setTimeout(()=>window.open(link, '_blank'), i * 700);
+  });
 }
 
 function itemsSummaryPlain(e){
