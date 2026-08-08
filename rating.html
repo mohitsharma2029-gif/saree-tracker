@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rate Your Experience — BhabhiSarees</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --ivory:#F7F1E8;
+    --maroon:#7A1F2B;
+    --maroon-dark:#5C1620;
+    --gold:#B8863B;
+    --ink:#2B211C;
+    --muted:#8A7A6D;
+    --line:#E4D9C8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--ivory);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .card{
+    background:#fff;
+    border-radius:16px;
+    padding:32px 24px;
+    max-width:380px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 4px 24px rgba(90,30,30,0.12);
+  }
+  h1{
+    color:var(--maroon);
+    font-size:1.3rem;
+    margin:0 0 6px;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:0.9rem;
+    margin-bottom:24px;
+  }
+  .stars{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    margin-bottom:20px;
+  }
+  .star{
+    font-size:2.6rem;
+    cursor:pointer;
+    color:#E4D9C8;
+    transition:transform 0.1s;
+    user-select:none;
+  }
+  .star:active{transform:scale(0.9);}
+  .star.filled{color:var(--gold);}
+  #status{
+    font-size:0.85rem;
+    color:var(--muted);
+    min-height:1.2em;
+  }
+  .thankyou{
+    display:none;
+  }
+  .thankyou.show{display:block;}
+  .thankyou h2{
+    color:var(--maroon);
+    font-size:1.4rem;
+    margin:0 0 8px;
+  }
+  .thankyou .stars-display{
+    font-size:2rem;
+    color:var(--gold);
+    margin-bottom:12px;
+  }
+  #google-review-link{
+    display:none;
+    margin-top:18px;
+    padding:12px 20px;
+    background:var(--maroon);
+    color:#fff;
+    text-decoration:none;
+    border-radius:8px;
+    font-weight:700;
+    font-size:0.9rem;
+  }
+  #google-review-link.show{display:inline-block;}
+  .invoice-tag{
+    font-size:0.75rem;
+    color:var(--muted);
+    margin-top:20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="rate-card">
+  <h1>🧵 BhabhiSarees</h1>
+  <div class="sub">How was your experience with us?</div>
+  <div class="stars" id="stars">
+    <span class="star" data-value="1">★</span>
+    <span class="star" data-value="2">★</span>
+    <span class="star" data-value="3">★</span>
+    <span class="star" data-value="4">★</span>
+    <span class="star" data-value="5">★</span>
+  </div>
+  <div id="status">Tap a star to rate</div>
+  <div class="invoice-tag" id="invoice-tag"></div>
+</div>
+
+<div class="card thankyou" id="thankyou-card">
+  <div class="stars-display" id="stars-display"></div>
+  <h2>Thank you! 🙏</h2>
+  <div class="sub">Your feedback means a lot to us.</div>
+  <a href="#" id="google-review-link" target="_blank">⭐ Also rate us on Google</a>
+</div>
+
+<script>
+/* =========================================================
+   FIREBASE CONFIG — same project as the main tracker app
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBGPmZBf0pXsY4JyaO9XuMeNCYzxuljG70",
+  authDomain: "bhabhi-saree-delivery.firebaseapp.com",
+  projectId: "bhabhi-saree-delivery",
+  storageBucket: "bhabhi-saree-delivery.firebasestorage.app",
+  messagingSenderId: "811532483442",
+  appId: "1:811532483442:web:a7943254c500a53d7b3beb"
+};
+
+/* =========================================================
+   GOOGLE REVIEW LINK — paste your Google Business review
+   link here once you have it. Leave blank to hide the button.
+   ========================================================= */
+const GOOGLE_REVIEW_LINK = "";
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Get invoice number from the URL, e.g. rating.html?inv=8416
+const params = new URLSearchParams(window.location.search);
+const invoice = params.get("inv") || "unknown";
+document.getElementById("invoice-tag").textContent = invoice !== "unknown" ? `Invoice #${invoice}` : "";
+
+let selectedRating = 0;
+let submitted = false;
+
+const starEls = document.querySelectorAll(".star");
+const statusEl = document.getElementById("status");
+
+function paintStars(value){
+  starEls.forEach(s=>{
+    s.classList.toggle("filled", Number(s.dataset.value) <= value);
+  });
+}
+
+starEls.forEach(star=>{
+  star.addEventListener("mouseenter", ()=>{
+    if(!submitted) paintStars(Number(star.dataset.value));
+  });
+  star.addEventListener("click", async ()=>{
+    if(submitted) return;
+    selectedRating = Number(star.dataset.value);
+    paintStars(selectedRating);
+    submitted = true;
+    statusEl.textContent = "Submitting...";
+
+    try{
+      await db.collection("ratings").add({
+        invoice: invoice,
+        rating: selectedRating,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(err){
+      console.error(err);
+      // Even if saving fails, still show thank-you -- don't make the
+      // customer feel like something went wrong on their end.
+    }
+
+    setTimeout(()=>{
+      document.getElementById("rate-card").style.display = "none";
+      const thankyou = document.getElementById("thankyou-card");
+      thankyou.classList.add("show");
+      document.getElementById("stars-display").textContent = "★".repeat(selectedRating) + "☆".repeat(5 - selectedRating);
+
+      if(GOOGLE_REVIEW_LINK){
+        const btn = document.getElementById("google-review-link");
+        btn.href = GOOGLE_REVIEW_LINK;
+        btn.classList.add("show");
+      }
+    }, 500);
+  });
+});
+document.getElementById("stars").addEventListener("mouseleave", ()=>{
+  if(!submitted) paintStars(0);
+});
+</script>
+</body>
+</html>
