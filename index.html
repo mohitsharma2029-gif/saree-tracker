@@ -1308,7 +1308,8 @@ function renderCustomerPanel(){
     const thankQueue = [];
     const rows = thankable.map(e=>{
       const itemText = itemsSummaryPlain(e);
-      const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! 🙏 We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We'd love to hear how we did — please reply and let us know how you'd rate your experience (⭐ out of 5). We look forward to serving you again soon!`;
+      const ratingUrl = `https://mohitsharma2029-gif.github.io/saree-tracker/rating.html?inv=${encodeURIComponent(e.invoice)}`;
+      const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! 🙏 We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We'd love to hear how we did — tap here to rate us: ${ratingUrl}\n\nWe look forward to serving you again soon!`;
       const link = customerWhatsappLink(e.phone, msg);
       if(link) thankQueue.push({name: e.customer || 'Customer', link});
       return `
