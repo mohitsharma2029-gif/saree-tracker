@@ -605,6 +605,12 @@
   <!-- ALERTS PANEL (Owner only) -->
   <div class="panel" id="panel-alerts">
     <div class="card">
+      <label style="margin-top:0;">Filter by salesman</label>
+      <select id="alerts-salesman-filter" onchange="renderAlertsPanel()">
+        <option value="">All salesmen</option>
+      </select>
+    </div>
+    <div class="card">
       <label style="margin-top:0;">📋 Not sent for finishing yet — today's sales</label>
       <div class="hint" style="margin-bottom:10px;">Anyone who sold a saree today and hasn't marked it "Sent for Finishing" yet shows here.</div>
       <div id="reminder-list"></div>
@@ -613,6 +619,12 @@
       <label style="margin-top:0;">🔴 Critical &amp; Overdue — needs a red alert</label>
       <div class="hint" style="margin-bottom:10px;">Anything not packed for 2+ days. Send a direct urgent message to the salesman.</div>
       <div id="alert-list"></div>
+    </div>
+    <div class="card">
+      <label style="margin-top:0;">📊 Full Report — one consolidated message</label>
+      <div class="hint" style="margin-bottom:10px;">Pick a salesman above, then send them one WhatsApp message listing every one of their active (not yet delivered) invoices.</div>
+      <div id="full-report-preview"></div>
+      <div id="full-report-send"></div>
     </div>
   </div>
 </div>
@@ -1112,9 +1124,21 @@ function whatsappLink(salesmanName, message){
 function renderAlertsPanel(){
   const todayStr = new Date().toISOString().slice(0,10);
 
+  // Populate salesman filter dropdown (once, then keep selection across re-renders)
+  const filterSel = document.getElementById("alerts-salesman-filter");
+  if(filterSel.options.length <= 1){
+    DEFAULT_STAFF.forEach(name=>{
+      const opt = document.createElement("option");
+      opt.value = name; opt.textContent = name;
+      filterSel.appendChild(opt);
+    });
+  }
+  const selectedSalesman = filterSel.value;
+  const matchesFilter = e => !selectedSalesman || e.salesman === selectedSalesman;
+
   // Section 1: sold today, still not sent for finishing
   const notSent = allEntries.filter(e =>
-    e.saleDate === todayStr && e.status === "Sold" && e.salesman
+    e.saleDate === todayStr && e.status === "Sold" && e.salesman && matchesFilter(e)
   );
   const reminderList = document.getElementById("reminder-list");
   if(notSent.length === 0){
@@ -1137,7 +1161,7 @@ function renderAlertsPanel(){
   }
 
   // Section 2: critical/overdue -- needs a red alert
-  const urgent = allEntries.filter(e => (isCritical(e) || isOverdue(e)) && e.salesman);
+  const urgent = allEntries.filter(e => (isCritical(e) || isOverdue(e)) && e.salesman && matchesFilter(e));
   const alertList = document.getElementById("alert-list");
   if(urgent.length === 0){
     alertList.innerHTML = `<div class="empty" style="padding:16px;">Nothing overdue right now 👍</div>`;
@@ -1157,6 +1181,39 @@ function renderAlertsPanel(){
                  : `<span style="font-size:0.75rem;color:var(--overdue);">No phone number saved</span>`}
         </div>`;
     }).join('');
+  }
+
+  // Section 3: full consolidated report for the selected salesman
+  const reportPreview = document.getElementById("full-report-preview");
+  const reportSend = document.getElementById("full-report-send");
+  if(!selectedSalesman){
+    reportPreview.innerHTML = `<div class="hint">Select a salesman above to build their report.</div>`;
+    reportSend.innerHTML = '';
+  } else {
+    const theirInvoices = allEntries
+      .filter(e => e.salesman === selectedSalesman && e.status !== "Delivered")
+      .sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
+
+    if(theirInvoices.length === 0){
+      reportPreview.innerHTML = `<div class="empty" style="padding:16px;">${escapeHtml(selectedSalesman)} has no active (non-delivered) invoices right now.</div>`;
+      reportSend.innerHTML = '';
+    } else {
+      const lines = theirInvoices.map((e,i)=>
+        `${i+1}. Inv #${e.invoice} — ${itemsSummaryPlain(e)} — ${e.status}${e.customer ? ' — '+e.customer : ''}`
+      );
+      const fullMsg = `📊 BhabhiSarees — Report for ${selectedSalesman}\n(${theirInvoices.length} active invoice${theirInvoices.length===1?'':'s'})\n\n${lines.join('\n')}`;
+
+      reportPreview.innerHTML = `
+        <div class="hint" style="margin-bottom:8px;">${theirInvoices.length} active invoice(s) will be included:</div>
+        <div style="max-height:200px;overflow-y:auto;font-size:0.82rem;background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:10px;">
+          ${theirInvoices.map(e=>`Inv #${escapeHtml(e.invoice)} — ${escapeHtml(itemsSummaryPlain(e))} — <b>${e.status}</b><br>`).join('')}
+        </div>`;
+
+      const link = whatsappLink(selectedSalesman, fullMsg);
+      reportSend.innerHTML = link
+        ? `<a href="${link}" target="_blank" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">📊 Send Full Report to ${escapeHtml(selectedSalesman)}</a>`
+        : `<div style="color:var(--overdue);font-size:0.8rem;margin-top:8px;">No phone number saved for ${escapeHtml(selectedSalesman)}</div>`;
+    }
   }
 }
 
