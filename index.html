@@ -638,7 +638,7 @@
     </div>
     <div class="card">
       <label style="margin-top:0;">🙏 Thank You — message the customer</label>
-      <div class="hint" style="margin-bottom:10px;">Delivered sarees where the customer's phone number was saved — send a thank-you note.</div>
+      <div class="hint" style="margin-bottom:10px;">Every sale with a saved customer number — send a thank-you note with a rating request, right after purchase.</div>
       <div id="thankyou-list"></div>
     </div>
   </div>
@@ -1289,21 +1289,23 @@ function renderCustomerPanel(){
     }).join('');
   }
 
-  // Thank You -- message the customer directly
-  const delivered = allEntries.filter(e => e.status === "Delivered" && e.phone);
+  // Thank You -- goes out right after a purchase, any status, not just Delivered
+  const thankable = allEntries
+    .filter(e => e.phone)
+    .sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
   const thankyouList = document.getElementById("thankyou-list");
-  if(delivered.length === 0){
-    thankyouList.innerHTML = `<div class="empty" style="padding:16px;">No delivered sarees with a saved customer number right now.</div>`;
+  if(thankable.length === 0){
+    thankyouList.innerHTML = `<div class="empty" style="padding:16px;">No sales with a saved customer number right now.</div>`;
   } else {
-    thankyouList.innerHTML = delivered.map(e=>{
+    thankyouList.innerHTML = thankable.map(e=>{
       const itemText = itemsSummaryPlain(e);
-      const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We look forward to serving you again soon. 🙏`;
+      const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! 🙏 We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We'd love to hear how we did — please reply and let us know how you'd rate your experience (⭐ out of 5). We look forward to serving you again soon!`;
       const link = customerWhatsappLink(e.phone, msg);
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
           <div>
             <div style="font-weight:700;">${escapeHtml(e.customer || 'Customer')} — Invoice #${escapeHtml(e.invoice)}</div>
-            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)} · ${escapeHtml(e.phone)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)} · ${escapeHtml(e.phone)} · Sold ${e.saleDate}</div>
           </div>
           ${link ? `<a href="${link}" target="_blank" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;padding:8px 14px;">🙏 Send</a>`
                  : `<span style="font-size:0.75rem;color:var(--overdue);">Invalid number</span>`}
