@@ -1,1182 +1,234 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Saree Sale Tracker — BhabhiSarees</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<style>
-  :root{
-    --ivory:#F7F1E8;
-    --maroon:#7A1F2B;
-    --maroon-dark:#5C1620;
-    --gold:#B8863B;
-    --ink:#2B211C;
-    --muted:#8A7A6D;
-    --line:#E4D9C8;
-    --card:#FFFFFF;
-    --sold:#8A7A6D;
-    --finishing:#B8863B;
-    --packed:#3F7A4E;
-    --delivered:#2B5C7A;
-    --overdue:#B33A3A;
-    --overdue-bg:#FBEAEA;
-    --critical:#7A0000;
-    --critical-bg:#F6D9D9;
-    --radius:10px;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
-    background:var(--ivory);
-    color:var(--ink);
-    padding-bottom:60px;
-  }
-  header{
-    background:linear-gradient(135deg,var(--maroon),var(--maroon-dark));
-    color:var(--ivory);
-    padding:20px 16px 24px;
-    position:relative;
-    overflow:hidden;
-  }
-  header::after{
-    content:"";
-    position:absolute;
-    right:-40px; top:-40px;
-    width:160px; height:160px;
-    border:2px solid rgba(247,241,232,0.15);
-    border-radius:50%;
-  }
-  header h1{
-    margin:0;
-    font-size:1.35rem;
-    letter-spacing:0.3px;
-    font-weight:600;
-  }
-  header .sub{
-    margin-top:4px;
-    font-size:0.82rem;
-    color:rgba(247,241,232,0.75);
-  }
-  .wrap{
-    max-width:760px;
-    margin:0 auto;
-    padding:0 14px;
-  }
-  .tabs{
-    display:flex;
-    gap:8px;
-    margin:-16px 0 16px;
-    position:relative;
-    z-index:2;
-  }
-  .tab-btn{
-    flex:1;
-    border:none;
-    padding:11px 8px;
-    border-radius:var(--radius);
-    background:var(--card);
-    color:var(--maroon);
-    font-weight:600;
-    font-size:0.85rem;
-    box-shadow:0 2px 8px rgba(90,30,30,0.12);
-    cursor:pointer;
-  }
-  .tab-btn.active{
-    background:var(--maroon);
-    color:var(--ivory);
-  }
-  .panel{display:none;}
-  .panel.active{display:block;}
-
-  .card{
-    background:var(--card);
-    border-radius:var(--radius);
-    padding:16px;
-    margin-bottom:14px;
-    box-shadow:0 1px 4px rgba(90,60,30,0.08);
-    border:1px solid var(--line);
-  }
-  label{
-    display:block;
-    font-size:0.78rem;
-    font-weight:600;
-    color:var(--muted);
-    margin:12px 0 4px;
-    text-transform:uppercase;
-    letter-spacing:0.4px;
-  }
-  label:first-of-type{margin-top:0;}
-  input[type=text], input[type=tel], input[type=date], select, textarea{
-    width:100%;
-    padding:10px 11px;
-    border:1px solid var(--line);
-    border-radius:8px;
-    font-size:0.95rem;
-    background:#FFFDF9;
-    color:var(--ink);
-  }
-  input:focus, select:focus, textarea:focus{
-    outline:2px solid var(--gold);
-    outline-offset:1px;
-  }
-  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-  .hint{font-size:0.75rem;color:var(--muted);margin-top:4px;}
-
-  .btn{
-    display:inline-block;
-    border:none;
-    padding:12px 18px;
-    border-radius:8px;
-    font-weight:600;
-    font-size:0.92rem;
-    cursor:pointer;
-  }
-  .btn-primary{
-    background:var(--maroon);
-    color:var(--ivory);
-    width:100%;
-    margin-top:16px;
-  }
-  .btn-primary:active{background:var(--maroon-dark);}
-  .btn-secondary{
-    background:var(--ivory);
-    color:var(--maroon);
-    border:1px solid var(--maroon);
-  }
-
-  .photo-drop{
-    border:1.5px dashed var(--line);
-    border-radius:8px;
-    padding:14px;
-    text-align:center;
-    color:var(--muted);
-    font-size:0.85rem;
-    cursor:pointer;
-    background:#FFFDF9;
-  }
-  .photo-preview{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
-    flex-wrap:wrap;
-  }
-  .photo-preview img{
-    width:64px; height:64px;
-    object-fit:cover;
-    border-radius:6px;
-    border:1px solid var(--line);
-  }
-  .upload-status{font-size:0.78rem;color:var(--gold);margin-top:6px;}
-
-  .filters{
-    display:flex;
-    gap:8px;
-    margin-bottom:12px;
-    overflow-x:auto;
-    padding-bottom:2px;
-  }
-  .chip{
-    flex-shrink:0;
-    padding:7px 13px;
-    border-radius:999px;
-    background:var(--card);
-    border:1px solid var(--line);
-    font-size:0.8rem;
-    font-weight:600;
-    color:var(--muted);
-    cursor:pointer;
-  }
-  .chip.active{
-    background:var(--maroon);
-    color:var(--ivory);
-    border-color:var(--maroon);
-  }
-
-  .entry{
-    background:var(--card);
-    border-radius:var(--radius);
-    padding:13px 14px;
-    margin-bottom:10px;
-    border:1px solid var(--line);
-    border-left:4px solid var(--sold);
-  }
-  .entry.status-Sold{border-left-color:var(--sold);}
-  .entry.status-Sent-for-Finishing{border-left-color:var(--finishing);}
-  .entry.status-Packed{border-left-color:var(--packed);}
-  .entry.status-Delivered{border-left-color:var(--delivered);}
-  .entry.overdue{
-    border-left-color:var(--overdue);
-    background:var(--overdue-bg);
-  }
-  .entry.critical{
-    border-left-color:var(--critical);
-    background:var(--critical-bg);
-    border-left-width:6px;
-    animation:pulse-critical 2s ease-in-out infinite;
-  }
-  @keyframes pulse-critical{
-    0%,100%{box-shadow:0 0 0 0 rgba(122,0,0,0.15);}
-    50%{box-shadow:0 0 0 4px rgba(122,0,0,0.08);}
-  }
-  .entry-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:8px;
-  }
-  .entry-title{font-weight:700; font-size:0.98rem;}
-  .entry-inv{font-size:0.78rem; color:var(--muted);}
-  .badge{
-    font-size:0.7rem;
-    font-weight:700;
-    padding:3px 9px;
-    border-radius:999px;
-    white-space:nowrap;
-    text-transform:uppercase;
-    letter-spacing:0.3px;
-  }
-  .badge-Sold{background:#EDE9E4;color:var(--sold);}
-  .badge-Sent-for-Finishing{background:#F5E9D5;color:var(--finishing);}
-  .badge-Packed{background:#E1F0E3;color:var(--packed);}
-  .badge-Delivered{background:#E1EBF0;color:var(--delivered);}
-  .overdue-flag{
-    display:inline-block;
-    margin-top:6px;
-    font-size:0.76rem;
-    font-weight:700;
-    color:var(--overdue);
-  }
-  .critical-flag{
-    display:inline-block;
-    margin-top:6px;
-    font-size:0.8rem;
-    font-weight:800;
-    color:var(--critical);
-    background:#fff;
-    padding:3px 9px;
-    border-radius:6px;
-    border:1.5px solid var(--critical);
-  }
-  .entry-meta{
-    font-size:0.83rem;
-    color:var(--ink);
-    margin-top:8px;
-    line-height:1.5;
-  }
-  .entry-meta span{color:var(--muted);}
-  .entry-photos{display:flex; gap:6px; margin-top:8px;}
-  .entry-photos img{width:44px;height:44px;object-fit:cover;border-radius:6px;}
-  .entry-actions{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
-    flex-wrap:wrap;
-  }
-  .entry-actions button{
-    font-size:0.78rem;
-    padding:7px 11px;
-    border-radius:6px;
-    border:1px solid var(--line);
-    background:#FFFDF9;
-    color:var(--ink);
-    cursor:pointer;
-    font-weight:600;
-  }
-  .entry-actions button.primary{
-    background:var(--maroon);
-    color:var(--ivory);
-    border-color:var(--maroon);
-  }
-  .empty{
-    text-align:center;
-    color:var(--muted);
-    padding:40px 10px;
-    font-size:0.9rem;
-  }
-  .summary-bar{
-    display:flex;
-    gap:8px;
-    margin-bottom:14px;
-  }
-  .stat{
-    flex:1;
-    background:var(--card);
-    border-radius:var(--radius);
-    padding:10px;
-    text-align:center;
-    border:1px solid var(--line);
-  }
-  .stat .num{font-size:1.3rem;font-weight:700;color:var(--maroon);}
-  .stat.stat-overdue .num{color:var(--overdue);}
-  .stat .lbl{font-size:0.68rem;color:var(--muted);text-transform:uppercase;}
-  #toast{
-    position:fixed;
-    bottom:18px;
-    left:50%;
-    transform:translateX(-50%);
-    background:var(--ink);
-    color:var(--ivory);
-    padding:10px 18px;
-    border-radius:8px;
-    font-size:0.85rem;
-    opacity:0;
-    pointer-events:none;
-    transition:opacity 0.25s;
-    z-index:50;
-  }
-  #toast.show{opacity:1;}
-  select[multiple]{height:auto;}
-  .item-row{
-    display:flex;
-    gap:6px;
-    margin-bottom:8px;
-  }
-  .item-row input{flex:1;}
-  .item-row button{
-    flex-shrink:0;
-    background:#FBEAEA;
-    color:var(--overdue);
-    border:1px solid var(--overdue);
-    border-radius:8px;
-    padding:0 12px;
-    font-weight:700;
-    cursor:pointer;
-  }
-
-  #login-screen{
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-  }
-  .login-card{
-    background:var(--card);
-    border-radius:14px;
-    padding:28px 24px;
-    max-width:340px;
-    width:100%;
-    box-shadow:0 4px 20px rgba(90,30,30,0.12);
-    border:1px solid var(--line);
-  }
-  .login-card h2{
-    margin:0 0 4px;
-    color:var(--maroon);
-    font-size:1.2rem;
-  }
-  .login-card .login-sub{
-    font-size:0.8rem;
-    color:var(--muted);
-    margin-bottom:18px;
-  }
-  .login-error{
-    font-size:0.8rem;
-    color:var(--overdue);
-    margin-top:8px;
-    min-height:1em;
-  }
-  .logout-link{
-    background:none;
-    border:none;
-    color:rgba(247,241,232,0.85);
-    font-size:0.78rem;
-    text-decoration:underline;
-    cursor:pointer;
-    padding:0;
-  }
-  .header-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-  }
-  .who-badge{
-    display:inline-block;
-    background:rgba(247,241,232,0.15);
-    color:var(--ivory);
-    font-size:0.72rem;
-    font-weight:600;
-    padding:4px 10px;
-    border-radius:999px;
-    margin-top:6px;
-  }
-  .locked-field{
-    padding:10px 11px;
-    border:1px solid var(--line);
-    border-radius:8px;
-    background:#EFE7DA;
-    color:var(--ink);
-    font-size:0.95rem;
-    font-weight:600;
-  }
-  .entry-photos img{cursor:pointer;}
-  #photo-lightbox{
-    display:none;
-    position:fixed;
-    top:0; left:0; right:0; bottom:0;
-    background:rgba(20,12,8,0.92);
-    z-index:200;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    cursor:zoom-out;
-  }
-  #photo-lightbox.show{display:flex;}
-  #photo-lightbox img{
-    max-width:100%;
-    max-height:90vh;
-    border-radius:8px;
-    box-shadow:0 8px 30px rgba(0,0,0,0.5);
-  }
-  #photo-lightbox .lightbox-close{
-    position:absolute;
-    top:16px; right:20px;
-    color:#fff;
-    font-size:2rem;
-    font-weight:300;
-    cursor:pointer;
-    line-height:1;
-  }
-</style>
-</head>
-<body>
-
-<!-- LOGIN SCREEN -->
-<div id="login-screen">
-  <div class="login-card">
-    <h2>🧵 Saree Sale Tracker</h2>
-    <div class="login-sub">Sign in to see your invoices</div>
-    <label style="margin-top:0;">Your Name</label>
-    <select id="login-name">
-      <option value="">Select your name</option>
-    </select>
-    <label>PIN</label>
-    <input type="password" id="login-pin" placeholder="Enter your PIN" inputmode="numeric">
-    <button class="btn btn-primary" id="btn-login">Sign In</button>
-    <div class="login-error" id="login-error"></div>
-  </div>
-</div>
-
-<!-- MAIN APP (hidden until signed in) -->
-<div id="app-content" style="display:none;">
-
-<header>
-  <div class="wrap">
-    <div class="header-top">
-      <div>
-        <h1>🧵 Saree Sale Tracker</h1>
-        <div class="sub">BhabhiSarees — sold → finishing → packed → delivered</div>
-      </div>
-      <button class="logout-link" id="btn-logout">Sign out</button>
-    </div>
-    <div class="who-badge" id="who-badge"></div>
-  </div>
-</header>
-
-<div class="wrap">
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-    <button class="tab-btn" data-tab="new">+ New Sale</button>
-  </div>
-
-  <!-- NEW SALE PANEL -->
-  <div class="panel" id="panel-new">
-    <div class="card">
-      <label>Invoice Number *</label>
-      <input type="text" id="f-invoice" placeholder="e.g. INV-1042">
-
-      <label>Sarees in this Invoice *</label>
-      <div id="items-list"></div>
-      <button type="button" class="btn btn-secondary" id="btn-add-item" style="width:100%;margin-bottom:4px;">+ Add another saree</button>
-      <div class="hint">Add one row per saree if this invoice has more than one item — they'll all be tracked together under this invoice.</div>
-
-      <div class="row2">
-        <div>
-          <label>Customer Name <span style="text-transform:none;font-weight:400;">(optional)</span></label>
-          <input type="text" id="f-customer" placeholder="Customer name">
-        </div>
-        <div>
-          <label>Customer Phone <span style="text-transform:none;font-weight:400;">(optional)</span></label>
-          <input type="tel" id="f-phone" placeholder="10-digit number">
-        </div>
-      </div>
-
-      <div class="row2">
-        <div>
-          <label>Salesman *</label>
-          <select id="f-salesman">
-            <option value="">Select salesman</option>
-          </select>
-          <div class="locked-field" id="f-salesman-locked" style="display:none;"></div>
-        </div>
-        <div>
-          <label>Sale Date *</label>
-          <input type="date" id="f-date">
-        </div>
-      </div>
-
-      <label>Photo (optional)</label>
-      <div class="photo-drop" id="photo-drop">Tap to take a photo or choose from gallery</div>
-      <input type="file" id="f-photo" accept="image/*" style="display:none;">
-      <div class="photo-preview" id="photo-preview"></div>
-      <div class="upload-status" id="upload-status"></div>
-
-      <div class="row2">
-        <div>
-          <label>Total Amount <span style="text-transform:none;font-weight:400;">(optional)</span></label>
-          <input type="text" id="f-total" placeholder="e.g. 22000" inputmode="decimal">
-        </div>
-        <div>
-          <label>Credit / Due Amount <span style="text-transform:none;font-weight:400;">(optional)</span></label>
-          <input type="text" id="f-credit" placeholder="e.g. 10000" inputmode="decimal">
-        </div>
-      </div>
-      <label>Credit Due Date <span style="text-transform:none;font-weight:400;">(optional — only if credit amount is filled)</span></label>
-      <input type="date" id="f-creditdate">
-
-      <button class="btn btn-primary" id="btn-save-sale">Save Sale</button>
-    </div>
-  </div>
-
-  <!-- DASHBOARD PANEL -->
-  <div class="panel active" id="panel-dashboard">
-    <div class="summary-bar">
-      <div class="stat"><div class="num" id="stat-total">0</div><div class="lbl">Total Active</div></div>
-      <div class="stat stat-overdue"><div class="num" id="stat-overdue">0</div><div class="lbl">Overdue</div></div>
-      <div class="stat stat-overdue"><div class="num" id="stat-critical" style="color:var(--critical);">0</div><div class="lbl">🔴 Critical</div></div>
-      <div class="stat"><div class="num" id="stat-today">0</div><div class="lbl">Sold Today</div></div>
-    </div>
-    <input type="text" id="entry-search" placeholder="🔍 Search by invoice number or customer name" style="margin-bottom:12px;">
-    <div class="filters" id="status-filters">
-      <div class="chip active" data-filter="all">All</div>
-      <div class="chip" data-filter="critical">🔴 3+ Days</div>
-      <div class="chip" data-filter="unclaimed">📥 Unclaimed</div>
-      <div class="chip" data-filter="credit">💰 Credit Due</div>
-      <div class="chip" data-filter="overdue">⚠ Overdue</div>
-      <div class="chip" data-filter="Sold">Sold</div>
-      <div class="chip" data-filter="Sent for Finishing">Sent for Finishing</div>
-      <div class="chip" data-filter="Packed">Packed</div>
-      <div class="chip" data-filter="Delivered">Delivered</div>
-    </div>
-    <div id="entries-list"></div>
-  </div>
-</div>
-
-</div><!-- /app-content -->
-
-<div id="toast"></div>
-<div id="photo-lightbox" onclick="closeLightbox()">
-  <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
-  <img id="lightbox-img" src="" onclick="event.stopPropagation()">
-</div>
-<input type="file" id="entry-photo-input" accept="image/*" style="display:none;">
-
-<script>
-/* =========================================================
-   1. FIREBASE CONFIG — REPLACE THIS BLOCK WITH YOUR OWN
-   Firebase console → gear icon → Project settings →
-   "Your apps" → copy the firebaseConfig object here.
-   ========================================================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyBGPmZBf0pXsY4JyaO9XuMeNCYzxuljG70",
-  authDomain: "bhabhi-saree-delivery.firebaseapp.com",
-  projectId: "bhabhi-saree-delivery",
-  storageBucket: "bhabhi-saree-delivery.firebasestorage.app",
-  messagingSenderId: "811532483442",
-  appId: "1:811532483442:web:a7943254c500a53d7b3beb"
-};
-
-/* =========================================================
-   2. CLOUDINARY CONFIG — REPLACE WITH YOUR OWN (free account)
-   cloudinary.com → Dashboard → Cloud name
-   Settings → Upload → Add an "unsigned" upload preset → paste its name
-   ========================================================= */
-const CLOUDINARY_CLOUD_NAME = "icufvyxp";
-const CLOUDINARY_UPLOAD_PRESET = "gwsh26gf";
-
-/* ========================================================= */
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-const COLLECTION = "sareeSales";
-
-const EMAIL_DOMAIN = "@bhabhisareestracker.app";
-const ADMIN_EMAIL = "mohit" + EMAIL_DOMAIN;
-const DEFAULT_STAFF = ["Jitu","Vicky","Hitesh","Chotu","Manish","Purab"];
-
-let allEntries = [];
-let currentFilter = "all";
-let searchQuery = "";
-let pendingPhotoUrl = null;
-let currentUserEmail = null;
-let currentSalesmanName = null;
-let isAdmin = false;
-let unsubscribeListener = null;
-
-// ---------- Tabs ----------
-document.querySelectorAll(".tab-btn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
-    if(btn.dataset.tab === "dashboard") renderEntries();
-  });
-});
-
-// ---------- Toast ----------
-function toast(msg){
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"), 2200);
-}
-
-// ---------- Default sale date to today ----------
-document.getElementById("f-date").valueAsDate = new Date();
-
-// ---------- Multi-item rows ----------
-let itemRowCount = 0;
-function addItemRow(value){
-  itemRowCount++;
-  const div = document.createElement("div");
-  div.className = "item-row";
-  div.innerHTML = `
-    <input type="text" class="f-item-input" placeholder="e.g. Rani Pink Banarasi Silk" value="${value ? escapeHtml(value) : ''}">
-    <button type="button" onclick="removeItemRow(this)">✕</button>
-  `;
-  document.getElementById("items-list").appendChild(div);
-}
-function removeItemRow(btn){
-  const list = document.getElementById("items-list");
-  if(list.children.length > 1){
-    btn.parentElement.remove();
-  }
-}
-document.getElementById("btn-add-item").addEventListener("click", ()=>addItemRow());
-addItemRow(); // start with one row
-
-// ---------- Salesman list (fixed list, edit DEFAULT_STAFF above to change) ----------
-function loadStaffList(){
-  const sel = document.getElementById("f-salesman");
-  sel.innerHTML = '<option value="">Select salesman</option>';
-  DEFAULT_STAFF.forEach(n=>{
-    const opt = document.createElement("option");
-    opt.value = n; opt.textContent = n;
-    sel.appendChild(opt);
-  });
-
-  const loginSel = document.getElementById("login-name");
-  loginSel.innerHTML = '<option value="">Select your name</option>';
-  DEFAULT_STAFF.forEach(n=>{
-    const opt = document.createElement("option");
-    opt.value = n; opt.textContent = n;
-    loginSel.appendChild(opt);
-  });
-  const ownerOpt = document.createElement("option");
-  ownerOpt.value = "__admin__"; ownerOpt.textContent = "Owner (Mohit)";
-  loginSel.appendChild(ownerOpt);
-}
-loadStaffList();
-
-// ---------- Login ----------
-document.getElementById("btn-login").addEventListener("click", ()=>{
-  const name = document.getElementById("login-name").value;
-  const pin = document.getElementById("login-pin").value;
-  const errEl = document.getElementById("login-error");
-  errEl.textContent = "";
-
-  if(!name || !pin){
-    errEl.textContent = "Please select your name and enter your PIN.";
-    return;
-  }
-  const email = name === "__admin__" ? ADMIN_EMAIL : (name.toLowerCase() + EMAIL_DOMAIN);
-
-  auth.signInWithEmailAndPassword(email, pin).catch(err=>{
-    errEl.textContent = "Wrong PIN or account not set up yet.";
-    console.error(err);
-  });
-});
-
-document.getElementById("btn-logout").addEventListener("click", ()=>{
-  auth.signOut();
-});
-
-// ---------- Auth state ----------
-auth.onAuthStateChanged(user=>{
-  if(unsubscribeListener){ unsubscribeListener(); unsubscribeListener = null; }
-  if(unclaimedUnsub){ unclaimedUnsub(); unclaimedUnsub = null; }
-
-  if(user){
-    currentUserEmail = user.email;
-    isAdmin = (currentUserEmail === ADMIN_EMAIL);
-    currentSalesmanName = isAdmin ? null : capitalize(currentUserEmail.split("@")[0]);
-
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("app-content").style.display = "block";
-    document.getElementById("who-badge").textContent = isAdmin
-      ? "Signed in as Owner — viewing all salesmen"
-      : "Signed in as " + currentSalesmanName;
-
-    // Lock or show salesman field on New Sale form
-    const dropdown = document.getElementById("f-salesman");
-    const locked = document.getElementById("f-salesman-locked");
-    if(isAdmin){
-      dropdown.style.display = "";
-      locked.style.display = "none";
-    } else {
-      dropdown.style.display = "none";
-      locked.style.display = "block";
-      locked.textContent = currentSalesmanName;
-    }
-
-    attachListener();
-  } else {
-    document.getElementById("login-screen").style.display = "flex";
-    document.getElementById("app-content").style.display = "none";
-    document.getElementById("login-pin").value = "";
-  }
-});
-
-function capitalize(s){
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-// ---------- Photo upload (Cloudinary unsigned) ----------
-document.getElementById("photo-drop").addEventListener("click", ()=>{
-  document.getElementById("f-photo").click();
-});
-document.getElementById("f-photo").addEventListener("change", async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const statusEl = document.getElementById("upload-status");
-
-  if(CLOUDINARY_CLOUD_NAME === "REPLACE_ME"){
-    statusEl.textContent = "Cloudinary not set up yet — photo will be skipped. See Setup tab.";
-    statusEl.style.color = "#B33A3A";
-    return;
-  }
-
-  statusEl.textContent = "Uploading photo...";
-  statusEl.style.color = "";
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-  try{
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-      method:"POST", body: formData
-    });
-    const data = await res.json();
-    if(data.secure_url){
-      pendingPhotoUrl = data.secure_url;
-      document.getElementById("photo-preview").innerHTML = `<img src="${data.secure_url}" onclick="openLightbox('${data.secure_url}')">`;
-      statusEl.textContent = "Photo uploaded ✓";
-    } else {
-      statusEl.textContent = "Upload failed — check Cloudinary setup.";
-    }
-  } catch(err){
-    statusEl.textContent = "Upload failed — check your internet or Cloudinary setup.";
-  }
-});
-
-// ---------- Save new sale ----------
-document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
-  const invoice = document.getElementById("f-invoice").value.trim();
-  const itemInputs = Array.from(document.querySelectorAll(".f-item-input"));
-  const items = itemInputs.map(el=>el.value.trim()).filter(Boolean);
-  const customer = document.getElementById("f-customer").value.trim();
-  const phone = document.getElementById("f-phone").value.trim();
-  const salesman = isAdmin ? document.getElementById("f-salesman").value : currentSalesmanName;
-  const saleDate = document.getElementById("f-date").value;
-  const totalAmount = document.getElementById("f-total").value.trim();
-  const creditAmount = document.getElementById("f-credit").value.trim();
-  const creditDue = document.getElementById("f-creditdate").value;
-
-  if(!invoice || items.length === 0 || !salesman || !saleDate){
-    toast("Please fill invoice number, at least one saree, and salesman");
-    return;
-  }
-
-  // Prevent duplicate invoice numbers -- never silently overwrite an existing entry
-  const btn = document.getElementById("btn-save-sale");
-  btn.disabled = true; btn.textContent = "Checking invoice...";
-  try{
-    const dupCheck = await db.collection(COLLECTION).where("invoice","==",invoice).limit(1).get();
-    if(!dupCheck.empty){
-      const existing = dupCheck.docs[0].data();
-      toast(`Invoice #${invoice} already exists (${existing.salesman || 'Unclaimed'}) — use a different number or edit that entry instead`);
-      btn.disabled = false; btn.textContent = "Save Sale";
-      return;
-    }
-  } catch(err){
-    console.error(err);
-  }
-
-  // salesmanEmail: which login this sale belongs to, for access control.
-  // Admin picking a salesman from the dropdown still tags it to that salesman's own login.
-  const salesmanEmail = isAdmin ? (salesman.toLowerCase() + EMAIL_DOMAIN) : currentUserEmail;
-
-  btn.textContent = "Saving...";
-
-  try{
-    await db.collection(COLLECTION).add({
-      invoice, items, customer: customer || null, phone: phone || null,
-      salesman, salesmanEmail, saleDate,
-      status: "Sold",
-      photoUrl: pendingPhotoUrl || null,
-      deliveryMethod: null,
-      totalAmount: totalAmount ? Number(totalAmount) : null,
-      creditAmount: creditAmount ? Number(creditAmount) : null,
-      creditDue: creditDue || null,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    toast("Sale saved ✓");
-    // reset form
-    document.getElementById("f-invoice").value = "";
-    document.getElementById("items-list").innerHTML = "";
-    addItemRow();
-    document.getElementById("f-customer").value = "";
-    document.getElementById("f-phone").value = "";
-    if(isAdmin) document.getElementById("f-salesman").value = "";
-    document.getElementById("f-date").valueAsDate = new Date();
-    document.getElementById("photo-preview").innerHTML = "";
-    document.getElementById("upload-status").textContent = "";
-    document.getElementById("f-total").value = "";
-    document.getElementById("f-credit").value = "";
-    document.getElementById("f-creditdate").value = "";
-    pendingPhotoUrl = null;
-  } catch(err){
-    toast("Error saving — check Firebase setup");
-    console.error(err);
-  }
-  btn.disabled = false; btn.textContent = "Save Sale";
-});
-
-// ---------- Dashboard: filters ----------
-document.getElementById("status-filters").addEventListener("click", (e)=>{
-  if(!e.target.classList.contains("chip")) return;
-  document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
-  e.target.classList.add("active");
-  currentFilter = e.target.dataset.filter;
-  renderEntries();
-});
-
-document.getElementById("entry-search").addEventListener("input", (e)=>{
-  searchQuery = e.target.value.trim().toLowerCase();
-  renderEntries();
-});
-
-// ---------- Live listener (attached after login, filtered by role) ----------
-let unclaimedUnsub = null;
-function attachListener(){
-  let query = db.collection(COLLECTION);
-  if(!isAdmin){
-    query = query.where("salesmanEmail","==",currentUserEmail);
-  }
-  unsubscribeListener = query.onSnapshot(snap=>{
-    const own = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    if(isAdmin){
-      allEntries = own;
-      allEntries.sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
-      renderEntries();
-    } else {
-      mergeAndRender(own, lastUnclaimed);
-    }
-  }, err=>{
-    console.error(err);
-    toast("Error loading data — check Firestore rules");
-  });
-
-  // Staff also need to see unclaimed (auto-imported, not yet claimed) entries
-  if(!isAdmin){
-    unclaimedUnsub = db.collection(COLLECTION).where("salesmanEmail","==",null).onSnapshot(snap=>{
-      lastUnclaimed = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      mergeAndRender(lastOwn, lastUnclaimed);
-    });
-  }
-}
-let lastOwn = [];
-let lastUnclaimed = [];
-function mergeAndRender(own, unclaimed){
-  lastOwn = own;
-  lastUnclaimed = unclaimed;
-  const map = new Map();
-  own.forEach(e=>map.set(e.id, e));
-  unclaimed.forEach(e=>map.set(e.id, e));
-  allEntries = Array.from(map.values());
-  allEntries.sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
-  renderEntries();
-}
-
-async function claimEntry(id){
-  await db.collection(COLLECTION).doc(id).update({
-    salesman: currentSalesmanName,
-    salesmanEmail: currentUserEmail
-  });
-  toast("Claimed — it's now in your list");
-}
-
-// ---------- Per-entry photo upload (from Dashboard cards) ----------
-let photoEditEntryId = null;
-function triggerPhotoUpload(id){
-  photoEditEntryId = id;
-  document.getElementById("entry-photo-input").click();
-}
-document.getElementById("entry-photo-input").addEventListener("change", async (e)=>{
-  const file = e.target.files[0];
-  if(!file || !photoEditEntryId) return;
-
-  if(CLOUDINARY_CLOUD_NAME === "REPLACE_ME"){
-    toast("Cloudinary not set up — see Setup instructions");
-    return;
-  }
-
-  toast("Uploading photo...");
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-  try{
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-      method:"POST", body: formData
-    });
-    const data = await res.json();
-    if(data.secure_url){
-      await db.collection(COLLECTION).doc(photoEditEntryId).update({photoUrl: data.secure_url});
-      toast("Photo added ✓");
-    } else {
-      toast("Upload failed — check Cloudinary setup");
-    }
-  } catch(err){
-    toast("Upload failed — check your internet connection");
-  }
-  e.target.value = ""; // reset so selecting the same file again still fires change
-  photoEditEntryId = null;
-});
-
-function daysAgo(dateStr){
-  const sale = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  return Math.floor((today - sale) / 86400000);
-}
-function isOverdue(entry){
-  return daysAgo(entry.saleDate) >= 2 && !["Packed","Delivered"].includes(entry.status);
-}
-function isCritical(entry){
-  return daysAgo(entry.saleDate) >= 3 && !["Packed","Delivered"].includes(entry.status);
-}
-
-function renderEntries(){
-  const list = document.getElementById("entries-list");
-  let filtered = allEntries;
-
-  if(currentFilter === "overdue"){
-    filtered = allEntries.filter(isOverdue);
-  } else if(currentFilter === "critical"){
-    filtered = allEntries.filter(isCritical);
-  } else if(currentFilter === "unclaimed"){
-    filtered = allEntries.filter(e=>!e.salesmanEmail);
-  } else if(currentFilter === "credit"){
-    filtered = allEntries.filter(e=>e.creditAmount && e.creditAmount > 0);
-  } else if(currentFilter !== "all"){
-    filtered = allEntries.filter(e=>e.status === currentFilter);
-  }
-
-  if(searchQuery){
-    filtered = filtered.filter(e=>{
-      const invoiceMatch = (e.invoice || "").toLowerCase().includes(searchQuery);
-      const customerMatch = (e.customer || "").toLowerCase().includes(searchQuery);
-      return invoiceMatch || customerMatch;
-    });
-  }
-
-  // Always newest-first: sale date, then invoice number as tiebreaker
-  // (critical/overdue items are still highlighted visually and have their
-  // own filter chips -- they just don't jump the queue in the main list)
-  filtered = [...filtered].sort((a,b)=>{
-    const dateDiff = new Date(b.saleDate) - new Date(a.saleDate);
-    if(dateDiff !== 0) return dateDiff;
-    const invA = parseInt(a.invoice) || 0;
-    const invB = parseInt(b.invoice) || 0;
-    return invB - invA;
-  });
-
-  // stats
-  const active = allEntries.filter(e=>!["Delivered"].includes(e.status));
-  document.getElementById("stat-total").textContent = active.length;
-  document.getElementById("stat-overdue").textContent = allEntries.filter(isOverdue).length;
-  document.getElementById("stat-critical").textContent = allEntries.filter(isCritical).length;
-  const todayStr = new Date().toISOString().slice(0,10);
-  document.getElementById("stat-today").textContent = allEntries.filter(e=>e.saleDate===todayStr).length;
-
-  if(filtered.length === 0){
-    list.innerHTML = `<div class="empty">No sarees in this view.</div>`;
-    return;
-  }
-
-  list.innerHTML = filtered.map(e=>{
-    const overdue = isOverdue(e);
-    const critical = isCritical(e);
-    const statusClass = e.status.replace(/ /g,"-");
-    const da = daysAgo(e.saleDate);
-    let flagHtml = '';
-    if(critical){
-      flagHtml = `<div class="critical-flag">🔴 URGENT — not packed for ${da} days</div>`;
-    } else if(overdue){
-      flagHtml = `<div class="overdue-flag">⚠ Not packed — ${da} day${da===1?'':'s'} since sale</div>`;
-    }
-    return `
-      <div class="entry status-${statusClass} ${critical?'critical':(overdue?'overdue':'')}">
-        <div class="entry-top">
-          <div>
-            <div class="entry-title">${itemsSummary(e)}</div>
-            <div class="entry-inv">Invoice #${escapeHtml(e.invoice)}</div>
-          </div>
-          <span class="badge badge-${statusClass}">${e.status}</span>
-        </div>
-        ${flagHtml}
-        ${(e.items && e.items.length > 1) ? `<div class="entry-meta" style="margin-top:6px;">${e.items.map(i=>'• '+escapeHtml(i)).join('<br>')}</div>` : ''}
-        <div class="entry-meta">
-          ${e.customer ? `Customer: <span>${escapeHtml(e.customer)}</span>` : ''}${e.customer && e.phone ? ' · ' : ''}${e.phone ? escapeHtml(e.phone) : ''}${(e.customer || e.phone) ? '<br>' : ''}
-          Salesman: <span>${e.salesman ? escapeHtml(e.salesman) : '📥 Unclaimed'}</span> · Sold: <span>${e.saleDate}</span>
-          ${e.deliveryMethod ? `<br>Delivery: <span>${e.deliveryMethod}</span>` : ''}
-        </div>
-        ${creditLineHtml(e)}
-        ${e.photoUrl ? `<div class="entry-photos"><img src="${e.photoUrl}" onclick="openLightbox('${e.photoUrl}')"></div>` : ''}
-        <div class="entry-actions">
-          ${!e.salesmanEmail && !isAdmin
-            ? `<button class="primary" onclick="claimEntry('${e.id}')">This one is mine</button><button onclick="triggerPhotoUpload('${e.id}')">${e.photoUrl ? 'Change Photo' : '📷 Add Photo'}</button>`
-            : nextActionButtons(e)}
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function nextActionButtons(e){
-  const steps = ["Sold","Sent for Finishing","Packed","Delivered"];
-  const idx = steps.indexOf(e.status);
-  let btns = "";
-  if(idx < steps.length - 1){
-    const next = steps[idx+1];
-    btns += `
-      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;">
-        <input type="checkbox" id="confirm-${e.id}" style="width:16px;height:16px;">
-        Confirm
-      </label>
-      <button class="primary" onclick="advanceStatus('${e.id}','${next}')">Mark ${next}</button>`;
-  }
-  btns += `<button onclick="editEntry('${e.id}')">Edit</button>`;
-  btns += `<button onclick="triggerPhotoUpload('${e.id}')">${e.photoUrl ? 'Change Photo' : '📷 Add Photo'}</button>`;
-  btns += `
-    <select onchange="changeStatusDirect('${e.id}', this.value)" style="padding:6px 8px;border-radius:6px;border:1px solid var(--line);font-size:0.78rem;font-weight:600;">
-      <option value="">Change status...</option>
-      ${steps.map(s=>`<option value="${s}" ${s===e.status?'disabled':''}>${s}</option>`).join('')}
-    </select>`;
-  if(isAdmin){
-    btns += `<button onclick="deleteEntry('${e.id}')" style="color:var(--overdue);border-color:var(--overdue);">Delete</button>`;
-  }
-  return btns;
-}
-
-async function deleteEntry(id){
-  if(!isAdmin) return; // safety check — only Owner can ever reach this
-  const e = allEntries.find(x=>x.id===id);
-  if(!e) return;
-
-  const pin = prompt(`Owner password required to delete:\n\nInvoice #${e.invoice} — ${(e.items||[e.item]).join(', ')}\n\nEnter your password to confirm:`);
-  if(!pin) return;
-
-  try{
-    const credential = firebase.auth.EmailAuthProvider.credential(ADMIN_EMAIL, pin);
-    await auth.currentUser.reauthenticateWithCredential(credential);
-  } catch(err){
-    toast("Wrong password — entry not deleted");
-    return;
-  }
-
-  await db.collection(COLLECTION).doc(id).delete();
-  toast("Entry deleted");
-}
-
-async function advanceStatus(id, newStatus){
-  const checkbox = document.getElementById(`confirm-${id}`);
-  if(!checkbox || !checkbox.checked){
-    toast("Please tick the Confirm box first");
-    return;
-  }
-  const updates = {status:newStatus};
-  if(newStatus === "Delivered"){
-    const method = prompt("Delivery method — type 'pickup' or 'porter':","pickup");
-    if(method) updates.deliveryMethod = method;
-  }
-  await db.collection(COLLECTION).doc(id).update(updates);
-  toast(`Marked as ${newStatus}`);
-}
-
-async function changeStatusDirect(id, newStatus){
-  if(!newStatus) return;
-  const e = allEntries.find(x=>x.id===id);
-  const ok = confirm(`Change status from "${e ? e.status : ''}" to "${newStatus}"?\n\nUse this to fix a mistake — e.g. if the wrong status was tapped by accident.`);
-  if(!ok){
-    renderEntries(); // reset the dropdown back to its placeholder
-    return;
-  }
-  await db.collection(COLLECTION).doc(id).update({status: newStatus});
-  toast(`Status changed to ${newStatus}`);
-}
-
-function editEntry(id){
-  const e = allEntries.find(x=>x.id===id);
-  if(!e) return;
-  const currentItems = (e.items && e.items.length) ? e.items.join(", ") : (e.item || "");
-  const newItemsStr = prompt("Sarees in this invoice (separate multiple with commas):", currentItems);
-  if(newItemsStr === null) return;
-  const newItems = newItemsStr.split(",").map(s=>s.trim()).filter(Boolean);
-  const newCustomer = prompt("Customer name:", e.customer);
-  if(newCustomer === null) return;
-  db.collection(COLLECTION).doc(id).update({items: newItems, customer:newCustomer})
-    .then(()=>toast("Updated"));
-}
-
-function escapeHtml(str){
-  const d = document.createElement("div");
-  d.textContent = str || "";
-  return d.innerHTML;
-}
-function openLightbox(url){
-  document.getElementById("lightbox-img").src = url;
-  document.getElementById("photo-lightbox").classList.add("show");
-}
-function closeLightbox(){
-  document.getElementById("photo-lightbox").classList.remove("show");
-}
-function itemsSummary(e){
-  const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : ["Unknown item"]);
-  if(list.length === 1) return escapeHtml(list[0]);
-  return escapeHtml(list[0]) + ` <span style="color:var(--muted);font-weight:400;font-size:0.82em;">+${list.length-1} more</span>`;
-}
-function creditLineHtml(e){
-  if(!e.creditAmount || e.creditAmount <= 0) return '';
-  const amt = "₹" + Number(e.creditAmount).toLocaleString('en-IN');
-  let dueText = e.creditDue ? `due ${e.creditDue}` : 'due date not set';
-  let overdueCredit = false;
-  if(e.creditDue){
-    const due = new Date(e.creditDue + "T00:00:00");
-    const today = new Date(); today.setHours(0,0,0,0);
-    overdueCredit = due < today;
-  }
-  const style = overdueCredit
-    ? 'color:var(--overdue);font-weight:700;'
-    : 'color:var(--gold);font-weight:600;';
-  return `<div style="margin-top:6px;font-size:0.83rem;${style}">💰 Credit: ${amt} — ${dueText}${overdueCredit ? ' (OVERDUE)' : ''}</div>`;
-}
-</script>
-</body>
-</html>
+"""
+RetailGraph -> Saree Sale Tracker sync script
+-----------------------------------------------
+Reads NEW sales bills from RetailGraph's SQL Server (read-only) and
+creates matching "unclaimed" entries in the Saree Sale Tracker's
+Firestore database. Salesman is left blank on purpose -- staff claim
+their own bills inside the app with one tap.
+
+This script only ever runs SELECT queries against SQL Server.
+It never writes, updates, or deletes anything in RetailGraph.
+
+Uses plain HTTPS (via the "requests" library) to talk to Firestore,
+instead of Google's grpc library -- this avoids connection issues
+some networks/antivirus/firewalls have with grpc.
+
+SETUP (one-time):
+1. pip install pyodbc requests google-auth
+2. Download your Firebase service account key:
+   Firebase console -> gear icon -> Project settings -> Service accounts
+   -> Generate new private key -> save as serviceAccountKey.json
+   in this same folder.
+3. Fill in the SQL_* settings below with your read-only login.
+4. Run once manually to test: python sync_retailgraph.py
+5. Once confirmed working, schedule it in Windows Task Scheduler
+   to run every 15-30 minutes.
+"""
+
+import pyodbc
+import requests
+from google.oauth2 import service_account
+import google.auth.transport.requests
+from datetime import datetime, timezone
+import os
+
+# ---------------- SETTINGS ----------------
+SQL_SERVER = r"DESKTOP-IJS0LSO\SQLEXPRESS"
+SQL_DATABASE = "BHABHINEW"
+SQL_USERNAME = "saree_tracker_readonly"   # the read-only login created earlier
+SQL_PASSWORD = "Bhabhi@2026"               # <-- your actual password (already set)
+
+# Only bills from the last N days are checked on each run -- keeps the
+# query fast. Increase this if you ever need to backfill further.
+SYNC_WINDOW_DAYS = 3
+
+EMAIL_DOMAIN = "@bhabhisareestracker.app"
+ADMIN_EMAIL = "mohit" + EMAIL_DOMAIN
+
+# Known staff -- ReferBy names are matched against this list (case/spacing
+# insensitive). Anything that doesn't match stays Unclaimed rather than
+# risk assigning a sale to the wrong person.
+KNOWN_STAFF = ["Jitu", "Vicky", "Hitesh", "Chotu", "Manish", "Purab"]
+
+def match_salesman(referby_name):
+    """Returns (properName, email) if the ReferBy name matches a known
+    staff member or the owner, otherwise (None, None)."""
+    if not referby_name:
+        return (None, None)
+    cleaned = referby_name.strip().lower()
+    if cleaned == "mohit":
+        return ("Mohit", ADMIN_EMAIL)
+    for name in KNOWN_STAFF:
+        if name.lower() == cleaned:
+            return (name, name.lower() + EMAIL_DOMAIN)
+    return (None, None)
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SERVICE_ACCOUNT_PATH = os.path.join(SCRIPT_DIR, "serviceAccountKey.json")
+# -------------------------------------------
+
+def fetch_recent_bills():
+    conn_str = (
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={SQL_SERVER};DATABASE={SQL_DATABASE};"
+        f"UID={SQL_USERNAME};PWD={SQL_PASSWORD}"
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    # READ-ONLY: this is a SELECT query only. Nothing is written to RetailGraph.
+    # Always checks the last 7 days fresh on every run -- this is what lets us
+    # catch invoices that were deleted and re-entered, not just brand-new ones.
+    query = """
+        SELECT
+            t.PKID AS SaleID,
+            t.EntryNo AS InvoiceNumber,
+            t.EntryDate AS SaleDate,
+            c.Customer AS CustomerName,
+            c.Phone1 AS CustomerPhone,
+            p.Product AS SareeName,
+            t.NetAmt AS TotalAmount,
+            t.Credit AS IsCredit,
+            t.CreditAmt AS CreditAmount,
+            t.CreditDate AS CreditDueDate,
+            rm.ReferBy AS SalesmanName
+        FROM tblSalesInv_Trn t
+        INNER JOIN tblSalesInv_Dtl d ON d.FKID = t.PKID
+        LEFT JOIN tblCustomer_Mas c ON c.PKCustomerID = t.FKCustomerID
+        LEFT JOIN tblProd_Mas p ON p.PKProdId = d.FKProdID
+        LEFT JOIN tblReferBy_Lnk rl ON rl.FKID = t.PKID
+        LEFT JOIN tblReferBy_Mas rm ON rm.PKReferId = rl.FKReferByID
+        WHERE t.EntryDate >= DATEADD(day, -?, CAST(GETDATE() AS DATE))
+        ORDER BY t.PKID ASC
+    """
+    cursor.execute(query, SYNC_WINDOW_DAYS)
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def get_access_token():
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_PATH,
+        scopes=["https://www.googleapis.com/auth/datastore"]
+    )
+    creds.refresh(google.auth.transport.requests.Request())
+    return creds.token, creds.project_id
+
+def fv(value):
+    """Convert a Python value into a Firestore REST 'value' object."""
+    if value is None:
+        return {"nullValue": None}
+    if isinstance(value, bool):
+        return {"booleanValue": value}
+    if isinstance(value, int):
+        return {"integerValue": str(value)}
+    if isinstance(value, float):
+        return {"doubleValue": value}
+    return {"stringValue": str(value)}
+
+def push_to_firestore(token, project_id, rows):
+    if not rows:
+        print("No bills found in the last 7 days.")
+        return
+
+    # Group line items by invoice (SaleID) -- one bill can have several sarees
+    invoices = {}
+    order = []
+    for row in rows:
+        sale_id, invoice_no, sale_date, customer, phone, saree, total_amt, is_credit, credit_amt, credit_due, referby_name = row
+        if sale_id not in invoices:
+            salesman_name, salesman_email = match_salesman(referby_name)
+            invoices[sale_id] = {
+                "sale_id": sale_id,
+                "invoice_no": invoice_no,
+                "sale_date": sale_date,
+                "customer": customer,
+                "phone": phone,
+                "items": [],
+                "total_amt": float(total_amt) if total_amt is not None else None,
+                "credit_amt": float(credit_amt) if (is_credit and credit_amt) else None,
+                "credit_due": credit_due,
+                "salesman_name": salesman_name,
+                "salesman_email": salesman_email
+            }
+            order.append(sale_id)
+        invoices[sale_id]["items"].append(saree or "Unknown item")
+
+    base_url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/sareeSales"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    created = 0
+    refreshed = 0
+    assigned = 0
+    unmatched_names = set()
+
+    # These are the only fields RetailGraph is allowed to overwrite on an
+    # already-synced invoice. Claim status, packing status, and photos
+    # belong to the app/staff from here on and are never touched again.
+    billing_fields = ["invoice", "items", "customer", "phone", "saleDate",
+                       "totalAmount", "creditAmount", "creditDue"]
+
+    for sale_id in order:
+        inv = invoices[sale_id]
+        doc_id = f"rg_{sale_id}"
+        doc_url = f"{base_url}/{doc_id}"
+
+        billing_data = {
+            "invoice": fv(str(inv["invoice_no"])),
+            "items": {"arrayValue": {"values": [fv(i) for i in inv["items"]]}},
+            "customer": fv(inv["customer"]),
+            "phone": fv(inv["phone"]),
+            "saleDate": fv(inv["sale_date"].strftime("%Y-%m-%d")),
+            "totalAmount": fv(inv["total_amt"]),
+            "creditAmount": fv(inv["credit_amt"]),
+            "creditDue": fv(inv["credit_due"].strftime("%Y-%m-%d") if inv["credit_due"] else None),
+        }
+
+        # Check if this invoice already exists in the tracker
+        check = requests.get(doc_url, headers=headers)
+
+        if check.status_code == 200:
+            # Already synced before -- refresh only billing details,
+            # leave salesman/status/photo exactly as staff left them.
+            mask = "&".join(f"updateMask.fieldPaths={f}" for f in billing_fields)
+            resp = requests.patch(f"{doc_url}?{mask}", headers=headers, json={"fields": billing_data})
+            if resp.status_code < 300:
+                refreshed += 1
+            else:
+                print(f"Failed to refresh invoice {inv['invoice_no']}: {resp.status_code} {resp.text}")
+        else:
+            # Brand new invoice -- create it as Unclaimed
+            full_data = dict(billing_data)
+            full_data.update({
+                "salesman": fv(inv["salesman_name"]),
+                "salesmanEmail": fv(inv["salesman_email"]),
+                "status": fv("Sold"),
+                "photoUrl": fv(None),
+                "deliveryMethod": fv(None),
+                "source": fv("retailgraph_auto"),
+                "retailGraphSaleID": fv(sale_id),
+            })
+            resp = requests.patch(doc_url, headers=headers, json={"fields": full_data})
+            if resp.status_code < 300:
+                created += 1
+                if inv["salesman_name"]:
+                    assigned += 1
+            else:
+                print(f"Failed to create invoice {inv['invoice_no']}: {resp.status_code} {resp.text}")
+
+    print(f"{created} new invoice(s) added ({assigned} auto-assigned to a salesman), {refreshed} existing invoice(s) refreshed.")
+
+def main():
+    if not os.path.exists(SERVICE_ACCOUNT_PATH):
+        print(f"ERROR: {SERVICE_ACCOUNT_PATH} not found. See setup instructions at the top of this file.")
+        return
+
+    token, project_id = get_access_token()
+
+    print(f"[{datetime.now()}] Checking RetailGraph for bills from the last {SYNC_WINDOW_DAYS} days...")
+
+    rows = fetch_recent_bills()
+    push_to_firestore(token, project_id, rows)
+
+if __name__ == "__main__":
+    main()
