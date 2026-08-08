@@ -1065,10 +1065,20 @@ function nextActionButtons(e){
   let btns = "";
   if(idx < steps.length - 1){
     const next = steps[idx+1];
-    btns += `<button class="primary" onclick="advanceStatus('${e.id}','${next}')">Mark ${next}</button>`;
+    btns += `
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;">
+        <input type="checkbox" id="confirm-${e.id}" style="width:16px;height:16px;">
+        Confirm
+      </label>
+      <button class="primary" onclick="advanceStatus('${e.id}','${next}')">Mark ${next}</button>`;
   }
   btns += `<button onclick="editEntry('${e.id}')">Edit</button>`;
   btns += `<button onclick="triggerPhotoUpload('${e.id}')">${e.photoUrl ? 'Change Photo' : '📷 Add Photo'}</button>`;
+  btns += `
+    <select onchange="changeStatusDirect('${e.id}', this.value)" style="padding:6px 8px;border-radius:6px;border:1px solid var(--line);font-size:0.78rem;font-weight:600;">
+      <option value="">Change status...</option>
+      ${steps.map(s=>`<option value="${s}" ${s===e.status?'disabled':''}>${s}</option>`).join('')}
+    </select>`;
   if(isAdmin){
     btns += `<button onclick="deleteEntry('${e.id}')" style="color:var(--overdue);border-color:var(--overdue);">Delete</button>`;
   }
@@ -1096,6 +1106,11 @@ async function deleteEntry(id){
 }
 
 async function advanceStatus(id, newStatus){
+  const checkbox = document.getElementById(`confirm-${id}`);
+  if(!checkbox || !checkbox.checked){
+    toast("Please tick the Confirm box first");
+    return;
+  }
   const updates = {status:newStatus};
   if(newStatus === "Delivered"){
     const method = prompt("Delivery method — type 'pickup' or 'porter':","pickup");
@@ -1103,6 +1118,18 @@ async function advanceStatus(id, newStatus){
   }
   await db.collection(COLLECTION).doc(id).update(updates);
   toast(`Marked as ${newStatus}`);
+}
+
+async function changeStatusDirect(id, newStatus){
+  if(!newStatus) return;
+  const e = allEntries.find(x=>x.id===id);
+  const ok = confirm(`Change status from "${e ? e.status : ''}" to "${newStatus}"?\n\nUse this to fix a mistake — e.g. if the wrong status was tapped by accident.`);
+  if(!ok){
+    renderEntries(); // reset the dropdown back to its placeholder
+    return;
+  }
+  await db.collection(COLLECTION).doc(id).update({status: newStatus});
+  toast(`Status changed to ${newStatus}`);
 }
 
 function editEntry(id){
