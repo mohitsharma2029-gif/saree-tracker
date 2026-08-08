@@ -1273,12 +1273,12 @@ function renderCustomerPanel(){
   if(readyForDelivery.length === 0){
     readyList.innerHTML = `<div class="empty" style="padding:16px;">No packed sarees with a saved customer number right now.</div>`;
   } else {
-    const readyLinks = [];
+    const readyQueue = [];
     const rows = readyForDelivery.map(e=>{
       const itemText = itemsSummaryPlain(e);
       const msg = `Hi ${e.customer || ''}, good news from BhabhiSarees! Your saree (Invoice #${e.invoice}, ${itemText}) is ready. Please let us know when you'd like to collect it or if you'd like it sent via porter. Thank you!`;
       const link = customerWhatsappLink(e.phone, msg);
-      if(link) readyLinks.push(link);
+      if(link) readyQueue.push({name: e.customer || 'Customer', link});
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
           <div>
@@ -1290,9 +1290,10 @@ function renderCustomerPanel(){
         </div>`;
     }).join('');
     readyList.innerHTML = `
-      <button onclick='openAllLinks(${JSON.stringify(readyLinks)})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
-        📦 Open All ${readyLinks.length} — one tap Send in each
+      <button onclick='startSendQueue("ready", ${JSON.stringify(readyQueue).replace(/'/g, "&#39;")})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
+        📦 Send to All ${readyQueue.length} (one at a time)
       </button>
+      <div id="queue-ready"></div>
       ${rows}`;
   }
 
@@ -1304,12 +1305,12 @@ function renderCustomerPanel(){
   if(thankable.length === 0){
     thankyouList.innerHTML = `<div class="empty" style="padding:16px;">No sales with a saved customer number right now.</div>`;
   } else {
-    const thankLinks = [];
+    const thankQueue = [];
     const rows = thankable.map(e=>{
       const itemText = itemsSummaryPlain(e);
       const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! 🙏 We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We'd love to hear how we did — please reply and let us know how you'd rate your experience (⭐ out of 5). We look forward to serving you again soon!`;
       const link = customerWhatsappLink(e.phone, msg);
-      if(link) thankLinks.push(link);
+      if(link) thankQueue.push({name: e.customer || 'Customer', link});
       return `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
           <div>
@@ -1321,22 +1322,43 @@ function renderCustomerPanel(){
         </div>`;
     }).join('');
     thankyouList.innerHTML = `
-      <button onclick='openAllLinks(${JSON.stringify(thankLinks)})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
-        🙏 Open All ${thankLinks.length} — one tap Send in each
+      <button onclick='startSendQueue("thank", ${JSON.stringify(thankQueue).replace(/'/g, "&#39;")})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
+        🙏 Send to All ${thankQueue.length} (one at a time)
       </button>
+      <div id="queue-thank"></div>
       ${rows}`;
   }
 }
 
-// Opens a list of WhatsApp links one after another, spaced out so the
-// browser's popup blocker doesn't block them. Each still needs one tap
-// on Send inside WhatsApp itself -- that step can't be automated.
-function openAllLinks(links){
-  if(!links || links.length === 0) return;
-  toast(`Opening ${links.length} WhatsApp chat${links.length===1?'':'s'}... allow popups if your browser asks`);
-  links.forEach((link, i)=>{
-    setTimeout(()=>window.open(link, '_blank'), i * 700);
-  });
+// Sequential send queue -- works on mobile because every WhatsApp open is
+// a genuine tap on a real link, not a scripted popup (which phones block).
+let sendQueues = {};
+function startSendQueue(key, queue){
+  sendQueues[key] = { items: queue, index: 0 };
+  renderSendQueue(key);
+}
+function renderSendQueue(key){
+  const state = sendQueues[key];
+  const container = document.getElementById(`queue-${key}`);
+  if(!state || state.index >= state.items.length){
+    if(container) container.innerHTML = state ? `<div class="hint" style="color:var(--gold);font-weight:700;">✓ All done!</div>` : '';
+    return;
+  }
+  const current = state.items[state.index];
+  container.innerHTML = `
+    <div class="card" style="background:var(--ivory);margin-bottom:10px;">
+      <div style="font-weight:700;margin-bottom:8px;">Sending ${state.index + 1} of ${state.items.length}: ${escapeHtml(current.name)}</div>
+      <a href="${current.link}" target="_blank" onclick="advanceSendQueue('${key}')" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;">
+        Tap to Open WhatsApp for ${escapeHtml(current.name)}
+      </a>
+      <div class="hint" style="margin-top:8px;">After sending, come back here and tap Next.</div>
+      <button onclick="advanceSendQueue('${key}')" class="btn btn-secondary" style="width:100%;margin-top:8px;">Next ▶</button>
+    </div>`;
+}
+function advanceSendQueue(key){
+  if(!sendQueues[key]) return;
+  sendQueues[key].index++;
+  renderSendQueue(key);
 }
 
 function itemsSummaryPlain(e){
