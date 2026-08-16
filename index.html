@@ -1466,7 +1466,7 @@ function renderEntries(){
         <div class="entry-top">
           <div>
             <div class="entry-title">${itemsSummary(e)}</div>
-            <div class="entry-inv">Invoice #${escapeHtml(e.invoice)}${(e.totalAmount !== undefined && e.totalAmount !== null) ? ` · <b style="color:var(--ink);">₹${Number(e.totalAmount).toLocaleString('en-IN')}</b>` : ''}</div>
+            <div class="entry-inv">Invoice #${escapeHtml(e.invoice)} · <b style="color:var(--ink);">${totalQty(e)} saree${totalQty(e)===1?'':'s'}</b>${(e.totalAmount !== undefined && e.totalAmount !== null) ? ` · <b style="color:var(--ink);">₹${Number(e.totalAmount).toLocaleString('en-IN')}</b>` : ''}</div>
           </div>
           <span class="badge badge-${statusClass}">${e.status}</span>
         </div>
@@ -1626,6 +1626,14 @@ function itemsSummary(e){
   const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : ["Unknown item"]);
   if(list.length === 1) return escapeHtml(list[0]);
   return escapeHtml(list[0]) + ` <span style="color:var(--muted);font-weight:400;font-size:0.82em;">+${list.length-1} more</span>`;
+}
+function totalQty(e){
+  const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : []);
+  if(list.length === 0) return 0;
+  return list.reduce((sum, item)=>{
+    const match = item.match(/×(\d+)\s*$/);
+    return sum + (match ? Number(match[1]) : 1);
+  }, 0);
 }
 function creditLineHtml(e){
   if(!e.creditAmount || e.creditAmount <= 0) return '';
