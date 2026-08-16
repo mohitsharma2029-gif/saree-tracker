@@ -530,7 +530,7 @@
       <label>Sarees in this Invoice *</label>
       <div id="items-list"></div>
       <button type="button" class="btn btn-secondary" id="btn-add-item" style="width:100%;margin-bottom:4px;">+ Add another saree</button>
-      <div class="hint">Add one row per saree if this invoice has more than one item — they'll all be tracked together under this invoice.</div>
+      <div class="hint">Add one row per saree, with quantity — they'll all be tracked together under this invoice.</div>
 
       <div class="row2">
         <div>
@@ -558,7 +558,11 @@
       </div>
 
       <label>Photos (optional — up to 3)</label>
-      <div class="photo-drop" id="photo-drop">Tap to take a photo or choose from gallery</div>
+      <div class="row2" style="margin-bottom:8px;">
+        <button type="button" class="btn btn-secondary" id="btn-take-photo" style="margin-top:0;">📷 Take Photo</button>
+        <button type="button" class="btn btn-secondary" id="btn-choose-gallery" style="margin-top:0;">🖼️ Gallery</button>
+      </div>
+      <input type="file" id="f-photo-camera" accept="image/*" capture="environment" style="display:none;">
       <input type="file" id="f-photo" accept="image/*" multiple style="display:none;">
       <div class="photo-preview" id="photo-preview"></div>
       <div class="upload-status" id="upload-status"></div>
@@ -653,6 +657,7 @@
   <button id="lightbox-remove-btn" onclick="event.stopPropagation(); removeCurrentLightboxPhoto()" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--overdue);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">🗑 Remove This Photo</button>
 </div>
 <input type="file" id="entry-photo-input" accept="image/*" multiple style="display:none;">
+<input type="file" id="entry-photo-camera-input" accept="image/*" capture="environment" style="display:none;">
 
 <script>
 /* =========================================================
@@ -678,6 +683,36 @@ const CLOUDINARY_CLOUD_NAME = "icufvyxp";
 const CLOUDINARY_UPLOAD_PRESET = "gwsh26gf";
 
 /* ========================================================= */
+
+// Uploads one file to Cloudinary. Retries once automatically on
+// failure (network drop / mobile signal), waiting briefly before
+// retrying. Returns {url} on success or {error} on failure.
+async function uploadPhotoWithRetry(file, attempt = 1){
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  try{
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: "POST", body: formData
+    });
+    const data = await res.json();
+    if(data.secure_url){
+      return { url: data.secure_url };
+    }
+    const serverMsg = (data && data.error && data.error.message) ? data.error.message : "Unknown error";
+    if(attempt < 2){
+      await new Promise(r => setTimeout(r, 1500));
+      return uploadPhotoWithRetry(file, attempt + 1);
+    }
+    return { error: serverMsg };
+  } catch(err){
+    if(attempt < 2){
+      await new Promise(r => setTimeout(r, 1500));
+      return uploadPhotoWithRetry(file, attempt + 1);
+    }
+    return { error: "Connection failed — check internet signal" };
+  }
+}
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -731,12 +766,13 @@ document.getElementById("f-date").valueAsDate = new Date();
 
 // ---------- Multi-item rows ----------
 let itemRowCount = 0;
-function addItemRow(value){
+function addItemRow(value, qty){
   itemRowCount++;
   const div = document.createElement("div");
   div.className = "item-row";
   div.innerHTML = `
-    <input type="text" class="f-item-input" placeholder="e.g. Rani Pink Banarasi Silk" value="${value ? escapeHtml(value) : ''}">
+    <input type="text" class="f-item-input" placeholder="e.g. Rani Pink Banarasi Silk" value="${value ? escapeHtml(value) : ''}" style="flex:3;">
+    <input type="number" class="f-item-qty" placeholder="Qty" min="1" value="${qty || 1}" style="flex:1;min-width:60px;">
     <button type="button" onclick="removeItemRow(this)">✕</button>
   `;
   document.getElementById("items-list").appendChild(div);
@@ -839,10 +875,16 @@ function capitalize(s){
 }
 
 // ---------- Photo upload (Cloudinary unsigned) ----------
-document.getElementById("photo-drop").addEventListener("click", ()=>{
+document.getElementById("btn-take-photo").addEventListener("click", ()=>{
+  document.getElementById("f-photo-camera").click();
+});
+document.getElementById("btn-choose-gallery").addEventListener("click", ()=>{
   document.getElementById("f-photo").click();
 });
-document.getElementById("f-photo").addEventListener("change", async (e)=>{
+document.getElementById("f-photo-camera").addEventListener("change", (e)=>handleNewSalePhotos(e));
+document.getElementById("f-photo").addEventListener("change", (e)=>handleNewSalePhotos(e));
+
+async function handleNewSalePhotos(e){
   const files = Array.from(e.target.files || []);
   if(files.length === 0) return;
   const statusEl = document.getElementById("upload-status");
@@ -867,27 +909,18 @@ document.getElementById("f-photo").addEventListener("change", async (e)=>{
   for(const file of toUpload){
     statusEl.textContent = `Uploading photo ${pendingPhotoUrls.length + 1}...`;
     statusEl.style.color = "";
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    try{
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method:"POST", body: formData
-      });
-      const data = await res.json();
-      if(data.secure_url){
-        pendingPhotoUrls.push(data.secure_url);
-        renderPhotoPreview();
-      } else {
-        statusEl.textContent = "Upload failed — check Cloudinary setup.";
-      }
-    } catch(err){
-      statusEl.textContent = "Upload failed — check your internet or Cloudinary setup.";
+    const result = await uploadPhotoWithRetry(file);
+    if(result.url){
+      pendingPhotoUrls.push(result.url);
+      renderPhotoPreview();
+    } else {
+      statusEl.textContent = `Photo "${file.name}" failed to upload: ${result.error}`;
+      statusEl.style.color = "#B33A3A";
     }
   }
   statusEl.textContent = `${pendingPhotoUrls.length}/3 photo${pendingPhotoUrls.length===1?'':'s'} uploaded ✓`;
   e.target.value = "";
-});
+}
 
 function renderPhotoPreview(){
   document.getElementById("photo-preview").innerHTML = pendingPhotoUrls.map((url,i)=>`
@@ -906,8 +939,13 @@ function removePendingPhoto(index){
 // ---------- Save new sale ----------
 document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
   const invoice = document.getElementById("f-invoice").value.trim();
-  const itemInputs = Array.from(document.querySelectorAll(".f-item-input"));
-  const items = itemInputs.map(el=>el.value.trim()).filter(Boolean);
+  const itemRows = Array.from(document.querySelectorAll(".item-row"));
+  const items = itemRows.map(row=>{
+    const name = row.querySelector(".f-item-input").value.trim();
+    const qty = Number(row.querySelector(".f-item-qty").value) || 1;
+    if(!name) return null;
+    return qty > 1 ? `${name} ×${qty}` : name;
+  }).filter(Boolean);
   const customer = document.getElementById("f-customer").value.trim();
   const phone = document.getElementById("f-phone").value.trim();
   const salesman = isAdmin ? document.getElementById("f-salesman").value : currentSalesmanName;
@@ -1064,7 +1102,14 @@ function triggerPhotoUpload(id){
   photoEditEntryId = id;
   document.getElementById("entry-photo-input").click();
 }
-document.getElementById("entry-photo-input").addEventListener("change", async (e)=>{
+function triggerCameraPhoto(id){
+  photoEditEntryId = id;
+  document.getElementById("entry-photo-camera-input").click();
+}
+document.getElementById("entry-photo-input").addEventListener("change", (e)=>handleEntryPhotos(e));
+document.getElementById("entry-photo-camera-input").addEventListener("change", (e)=>handleEntryPhotos(e));
+
+async function handleEntryPhotos(e){
   const files = Array.from(e.target.files || []);
   if(files.length === 0 || !photoEditEntryId) return;
 
@@ -1089,21 +1134,11 @@ document.getElementById("entry-photo-input").addEventListener("change", async (e
   const uploaded = [];
   for(const file of toUpload){
     toast(`Uploading photo ${existing.length + uploaded.length + 1}...`);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    try{
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method:"POST", body: formData
-      });
-      const data = await res.json();
-      if(data.secure_url){
-        uploaded.push(data.secure_url);
-      } else {
-        toast("Upload failed — check Cloudinary setup");
-      }
-    } catch(err){
-      toast("Upload failed — check your internet connection");
+    const result = await uploadPhotoWithRetry(file);
+    if(result.url){
+      uploaded.push(result.url);
+    } else {
+      toast(`Photo "${file.name}" failed: ${result.error}`);
     }
   }
 
@@ -1116,7 +1151,7 @@ document.getElementById("entry-photo-input").addEventListener("change", async (e
 
   e.target.value = ""; // reset so selecting the same file again still fires change
   photoEditEntryId = null;
-});
+}
 
 function daysAgo(dateStr){
   const sale = new Date(dateStr + "T00:00:00");
@@ -1431,7 +1466,7 @@ function renderEntries(){
         <div class="entry-top">
           <div>
             <div class="entry-title">${itemsSummary(e)}</div>
-            <div class="entry-inv">Invoice #${escapeHtml(e.invoice)}</div>
+            <div class="entry-inv">Invoice #${escapeHtml(e.invoice)}${(e.totalAmount !== undefined && e.totalAmount !== null) ? ` · <b style="color:var(--ink);">₹${Number(e.totalAmount).toLocaleString('en-IN')}</b>` : ''}</div>
           </div>
           <span class="badge badge-${statusClass}">${e.status}</span>
         </div>
@@ -1449,7 +1484,7 @@ function renderEntries(){
         }).join('')}</div>` : ''}
         <div class="entry-actions">
           ${!e.salesmanEmail && !isAdmin
-            ? `<button class="primary" onclick="claimEntry('${e.id}')">This one is mine</button><button onclick="triggerPhotoUpload('${e.id}')">📷 Add Photo (${getPhotos(e).length}/3)</button>`
+            ? `<button class="primary" onclick="claimEntry('${e.id}')">This one is mine</button><button onclick="triggerCameraPhoto('${e.id}')">📷 Take Photo (${getPhotos(e).length}/3)</button><button onclick="triggerPhotoUpload('${e.id}')">🖼️ Gallery</button>`
             : nextActionButtons(e)}
         </div>
       </div>
@@ -1471,12 +1506,14 @@ function nextActionButtons(e){
       <button class="primary" onclick="advanceStatus('${e.id}','${next}')">Mark ${next}</button>`;
   }
 
+  btns += `<button onclick="triggerCameraPhoto('${e.id}')">📷 Take Photo (${getPhotos(e).length}/3)</button>`;
+
   btns += `
     <div class="more-actions">
       <button onclick="toggleMoreMenu('${e.id}')">⋯ More</button>
       <div class="more-menu" id="more-menu-${e.id}">
         <button onclick="editEntry('${e.id}'); toggleMoreMenu('${e.id}')">✏️ Edit details</button>
-        <button onclick="triggerPhotoUpload('${e.id}'); toggleMoreMenu('${e.id}')">📷 Photos (${getPhotos(e).length}/3)</button>
+        <button onclick="triggerPhotoUpload('${e.id}'); toggleMoreMenu('${e.id}')">🖼️ Gallery Photo (${getPhotos(e).length}/3)</button>
         <select onchange="changeStatusDirect('${e.id}', this.value)">
           <option value="">↕ Change status...</option>
           ${steps.map(s=>`<option value="${s}" ${s===e.status?'disabled':''}>${s}</option>`).join('')}
