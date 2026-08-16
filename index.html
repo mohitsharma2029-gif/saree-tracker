@@ -1,3 +1,6 @@
+
+
+Saree tracker · HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -91,7 +94,7 @@
   }
   .panel{display:none;}
   .panel.active{display:block;}
-
+ 
   .card{
     background:var(--card);
     border-radius:var(--radius);
@@ -125,7 +128,7 @@
   }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .hint{font-size:0.75rem;color:var(--muted);margin-top:4px;}
-
+ 
   .btn{
     display:inline-block;
     border:none;
@@ -147,7 +150,7 @@
     color:var(--maroon);
     border:1px solid var(--maroon);
   }
-
+ 
   .photo-drop{
     border:1.5px dashed var(--line);
     border-radius:8px;
@@ -171,7 +174,7 @@
     border:1px solid var(--line);
   }
   .upload-status{font-size:0.78rem;color:var(--gold);margin-top:6px;}
-
+ 
   .filters{
     display:flex;
     gap:8px;
@@ -195,7 +198,7 @@
     color:var(--ivory);
     border-color:var(--maroon);
   }
-
+ 
   .entry{
     background:var(--card);
     border-radius:var(--radius);
@@ -383,7 +386,7 @@
     font-weight:700;
     cursor:pointer;
   }
-
+ 
   #login-screen{
     min-height:100vh;
     display:flex;
@@ -480,7 +483,7 @@
 </style>
 </head>
 <body>
-
+ 
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
   <div class="login-card">
@@ -496,10 +499,10 @@
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
-
+ 
 <!-- MAIN APP (hidden until signed in) -->
 <div id="app-content" style="display:none;">
-
+ 
 <header>
   <div class="wrap">
     <div class="header-top">
@@ -512,7 +515,7 @@
     <div class="who-badge" id="who-badge"></div>
   </div>
 </header>
-
+ 
 <div class="wrap">
   <div class="tabs">
     <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
@@ -520,18 +523,18 @@
     <button class="tab-btn" data-tab="alerts" id="alerts-tab-btn" style="display:none;">📢 Alerts</button>
     <button class="tab-btn" data-tab="customer" id="customer-tab-btn" style="display:none;">💌 Customer</button>
   </div>
-
+ 
   <!-- NEW SALE PANEL -->
   <div class="panel" id="panel-new">
     <div class="card">
       <label>Invoice Number *</label>
       <input type="text" id="f-invoice" placeholder="e.g. INV-1042">
-
+ 
       <label>Sarees in this Invoice *</label>
       <div id="items-list"></div>
       <button type="button" class="btn btn-secondary" id="btn-add-item" style="width:100%;margin-bottom:4px;">+ Add another saree</button>
       <div class="hint">Add one row per saree, with quantity — they'll all be tracked together under this invoice.</div>
-
+ 
       <div class="row2">
         <div>
           <label>Customer Name <span style="text-transform:none;font-weight:400;">(optional)</span></label>
@@ -542,7 +545,7 @@
           <input type="tel" id="f-phone" placeholder="10-digit number">
         </div>
       </div>
-
+ 
       <div class="row2">
         <div>
           <label>Salesman *</label>
@@ -556,7 +559,7 @@
           <input type="date" id="f-date">
         </div>
       </div>
-
+ 
       <label>Photos (optional — up to 3)</label>
       <div class="row2" style="margin-bottom:8px;">
         <button type="button" class="btn btn-secondary" id="btn-take-photo" style="margin-top:0;">📷 Take Photo</button>
@@ -566,7 +569,7 @@
       <input type="file" id="f-photo" accept="image/*" multiple style="display:none;">
       <div class="photo-preview" id="photo-preview"></div>
       <div class="upload-status" id="upload-status"></div>
-
+ 
       <div class="row2">
         <div>
           <label>Total Amount <span style="text-transform:none;font-weight:400;">(optional)</span></label>
@@ -579,11 +582,11 @@
       </div>
       <label>Credit Due Date <span style="text-transform:none;font-weight:400;">(optional — only if credit amount is filled)</span></label>
       <input type="date" id="f-creditdate">
-
+ 
       <button class="btn btn-primary" id="btn-save-sale">Save Sale</button>
     </div>
   </div>
-
+ 
   <!-- DASHBOARD PANEL -->
   <div class="panel active" id="panel-dashboard">
     <div class="summary-bar">
@@ -597,6 +600,7 @@
       <div class="chip active" data-filter="all">All</div>
       <div class="chip" data-filter="critical">🔴 3+ Days</div>
       <div class="chip" data-filter="unclaimed">📥 Unclaimed</div>
+      <div class="chip" data-filter="rau">📍 Rau Delivery</div>
       <div class="chip" data-filter="credit">💰 Credit Due</div>
       <div class="chip" data-filter="overdue">⚠ Overdue</div>
       <div class="chip" data-filter="Sold">Sold</div>
@@ -606,7 +610,7 @@
     </div>
     <div id="entries-list"></div>
   </div>
-
+ 
   <!-- ALERTS PANEL (Owner only) -->
   <div class="panel" id="panel-alerts">
     <div class="card">
@@ -632,7 +636,7 @@
       <div id="full-report-send"></div>
     </div>
   </div>
-
+ 
   <!-- CUSTOMER MESSAGES PANEL (Owner only) -->
   <div class="panel" id="panel-customer">
     <div class="card">
@@ -647,9 +651,9 @@
     </div>
   </div>
 </div>
-
+ 
 </div><!-- /app-content -->
-
+ 
 <div id="toast"></div>
 <div id="photo-lightbox" onclick="closeLightbox()">
   <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
@@ -658,7 +662,7 @@
 </div>
 <input type="file" id="entry-photo-input" accept="image/*" multiple style="display:none;">
 <input type="file" id="entry-photo-camera-input" accept="image/*" capture="environment" style="display:none;">
-
+ 
 <script>
 /* =========================================================
    1. FIREBASE CONFIG — REPLACE THIS BLOCK WITH YOUR OWN
@@ -673,7 +677,7 @@ const firebaseConfig = {
   messagingSenderId: "811532483442",
   appId: "1:811532483442:web:a7943254c500a53d7b3beb"
 };
-
+ 
 /* =========================================================
    2. CLOUDINARY CONFIG — REPLACE WITH YOUR OWN (free account)
    cloudinary.com → Dashboard → Cloud name
@@ -681,9 +685,9 @@ const firebaseConfig = {
    ========================================================= */
 const CLOUDINARY_CLOUD_NAME = "icufvyxp";
 const CLOUDINARY_UPLOAD_PRESET = "gwsh26gf";
-
+ 
 /* ========================================================= */
-
+ 
 // Uploads one file to Cloudinary. Retries once automatically on
 // failure (network drop / mobile signal), waiting briefly before
 // retrying. Returns {url} on success or {error} on failure.
@@ -713,12 +717,12 @@ async function uploadPhotoWithRetry(file, attempt = 1){
     return { error: "Connection failed — check internet signal" };
   }
 }
-
+ 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 const COLLECTION = "sareeSales";
-
+ 
 const EMAIL_DOMAIN = "@bhabhisareestracker.app";
 const ADMIN_EMAIL = "mohit" + EMAIL_DOMAIN;
 const DEFAULT_STAFF = ["Jitu","Vicky","Hitesh","Chotu","Manish","Purab"];
@@ -730,7 +734,7 @@ const STAFF_PHONES = {
   "Manish": "919109554065",
   "Purab": "918827055435"
 };
-
+ 
 let allEntries = [];
 let currentFilter = "all";
 let searchQuery = "";
@@ -739,7 +743,7 @@ let currentUserEmail = null;
 let currentSalesmanName = null;
 let isAdmin = false;
 let unsubscribeListener = null;
-
+ 
 // ---------- Tabs ----------
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
@@ -752,7 +756,7 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
     if(btn.dataset.tab === "customer") renderCustomerPanel();
   });
 });
-
+ 
 // ---------- Toast ----------
 function toast(msg){
   const t = document.getElementById("toast");
@@ -760,10 +764,10 @@ function toast(msg){
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"), 2200);
 }
-
+ 
 // ---------- Default sale date to today ----------
 document.getElementById("f-date").valueAsDate = new Date();
-
+ 
 // ---------- Multi-item rows ----------
 let itemRowCount = 0;
 function addItemRow(value, qty){
@@ -785,7 +789,7 @@ function removeItemRow(btn){
 }
 document.getElementById("btn-add-item").addEventListener("click", ()=>addItemRow());
 addItemRow(); // start with one row
-
+ 
 // ---------- Salesman list (fixed list, edit DEFAULT_STAFF above to change) ----------
 function loadStaffList(){
   const sel = document.getElementById("f-salesman");
@@ -795,7 +799,7 @@ function loadStaffList(){
     opt.value = n; opt.textContent = n;
     sel.appendChild(opt);
   });
-
+ 
   const loginSel = document.getElementById("login-name");
   loginSel.innerHTML = '<option value="">Select your name</option>';
   DEFAULT_STAFF.forEach(n=>{
@@ -808,40 +812,40 @@ function loadStaffList(){
   loginSel.appendChild(ownerOpt);
 }
 loadStaffList();
-
+ 
 // ---------- Login ----------
 document.getElementById("btn-login").addEventListener("click", ()=>{
   const name = document.getElementById("login-name").value;
   const pin = document.getElementById("login-pin").value;
   const errEl = document.getElementById("login-error");
   errEl.textContent = "";
-
+ 
   if(!name || !pin){
     errEl.textContent = "Please select your name and enter your PIN.";
     return;
   }
   const email = name === "__admin__" ? ADMIN_EMAIL : (name.toLowerCase() + EMAIL_DOMAIN);
-
+ 
   auth.signInWithEmailAndPassword(email, pin).catch(err=>{
     errEl.textContent = "Wrong PIN or account not set up yet.";
     console.error(err);
   });
 });
-
+ 
 document.getElementById("btn-logout").addEventListener("click", ()=>{
   auth.signOut();
 });
-
+ 
 // ---------- Auth state ----------
 auth.onAuthStateChanged(user=>{
   if(unsubscribeListener){ unsubscribeListener(); unsubscribeListener = null; }
   if(unclaimedUnsub){ unclaimedUnsub(); unclaimedUnsub = null; }
-
+ 
   if(user){
     currentUserEmail = user.email;
     isAdmin = (currentUserEmail === ADMIN_EMAIL);
     currentSalesmanName = isAdmin ? null : capitalize(currentUserEmail.split("@")[0]);
-
+ 
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-content").style.display = "block";
     document.getElementById("who-badge").textContent = isAdmin
@@ -849,7 +853,7 @@ auth.onAuthStateChanged(user=>{
       : "Signed in as " + currentSalesmanName;
     document.getElementById("alerts-tab-btn").style.display = isAdmin ? "" : "none";
     document.getElementById("customer-tab-btn").style.display = isAdmin ? "" : "none";
-
+ 
     // Lock or show salesman field on New Sale form
     const dropdown = document.getElementById("f-salesman");
     const locked = document.getElementById("f-salesman-locked");
@@ -861,7 +865,7 @@ auth.onAuthStateChanged(user=>{
       locked.style.display = "block";
       locked.textContent = currentSalesmanName;
     }
-
+ 
     attachListener();
   } else {
     document.getElementById("login-screen").style.display = "flex";
@@ -869,11 +873,11 @@ auth.onAuthStateChanged(user=>{
     document.getElementById("login-pin").value = "";
   }
 });
-
+ 
 function capitalize(s){
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
-
+ 
 // ---------- Photo upload (Cloudinary unsigned) ----------
 document.getElementById("btn-take-photo").addEventListener("click", ()=>{
   document.getElementById("f-photo-camera").click();
@@ -883,18 +887,18 @@ document.getElementById("btn-choose-gallery").addEventListener("click", ()=>{
 });
 document.getElementById("f-photo-camera").addEventListener("change", (e)=>handleNewSalePhotos(e));
 document.getElementById("f-photo").addEventListener("change", (e)=>handleNewSalePhotos(e));
-
+ 
 async function handleNewSalePhotos(e){
   const files = Array.from(e.target.files || []);
   if(files.length === 0) return;
   const statusEl = document.getElementById("upload-status");
-
+ 
   if(CLOUDINARY_CLOUD_NAME === "REPLACE_ME"){
     statusEl.textContent = "Cloudinary not set up yet — photos will be skipped. See Setup tab.";
     statusEl.style.color = "#B33A3A";
     return;
   }
-
+ 
   const room = 3 - pendingPhotoUrls.length;
   if(room <= 0){
     statusEl.textContent = "Already have 3 photos — remove one first to add another.";
@@ -905,7 +909,7 @@ async function handleNewSalePhotos(e){
   if(files.length > room){
     toast(`Only ${room} more photo${room===1?'':'s'} allowed (max 3 total) — extra ones skipped`);
   }
-
+ 
   for(const file of toUpload){
     statusEl.textContent = `Uploading photo ${pendingPhotoUrls.length + 1}...`;
     statusEl.style.color = "";
@@ -921,7 +925,7 @@ async function handleNewSalePhotos(e){
   statusEl.textContent = `${pendingPhotoUrls.length}/3 photo${pendingPhotoUrls.length===1?'':'s'} uploaded ✓`;
   e.target.value = "";
 }
-
+ 
 function renderPhotoPreview(){
   document.getElementById("photo-preview").innerHTML = pendingPhotoUrls.map((url,i)=>`
     <div style="position:relative;">
@@ -935,7 +939,7 @@ function removePendingPhoto(index){
   renderPhotoPreview();
   document.getElementById("upload-status").textContent = `${pendingPhotoUrls.length}/3 photo${pendingPhotoUrls.length===1?'':'s'} uploaded`;
 }
-
+ 
 // ---------- Save new sale ----------
 document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
   const invoice = document.getElementById("f-invoice").value.trim();
@@ -953,12 +957,12 @@ document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
   const totalAmount = document.getElementById("f-total").value.trim();
   const creditAmount = document.getElementById("f-credit").value.trim();
   const creditDue = document.getElementById("f-creditdate").value;
-
+ 
   if(!invoice || items.length === 0 || !salesman || !saleDate){
     toast("Please fill invoice number, at least one saree, and salesman");
     return;
   }
-
+ 
   // Prevent duplicate invoice numbers -- never silently overwrite an existing entry
   const btn = document.getElementById("btn-save-sale");
   btn.disabled = true; btn.textContent = "Checking invoice...";
@@ -973,13 +977,13 @@ document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
   } catch(err){
     console.error(err);
   }
-
+ 
   // salesmanEmail: which login this sale belongs to, for access control.
   // Admin picking a salesman from the dropdown still tags it to that salesman's own login.
   const salesmanEmail = isAdmin ? (salesman.toLowerCase() + EMAIL_DOMAIN) : currentUserEmail;
-
+ 
   btn.textContent = "Saving...";
-
+ 
   try{
     await db.collection(COLLECTION).add({
       invoice, items, customer: customer || null, phone: phone || null,
@@ -1013,7 +1017,7 @@ document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
   }
   btn.disabled = false; btn.textContent = "Save Sale";
 });
-
+ 
 // ---------- Dashboard: filters ----------
 document.getElementById("status-filters").addEventListener("click", (e)=>{
   if(!e.target.classList.contains("chip")) return;
@@ -1022,12 +1026,12 @@ document.getElementById("status-filters").addEventListener("click", (e)=>{
   currentFilter = e.target.dataset.filter;
   renderEntries();
 });
-
+ 
 document.getElementById("entry-search").addEventListener("input", (e)=>{
   searchQuery = e.target.value.trim().toLowerCase();
   renderEntries();
 });
-
+ 
 // ---------- Live listener (attached after login, filtered by role) ----------
 let unclaimedUnsub = null;
 function attachListener(){
@@ -1048,7 +1052,7 @@ function attachListener(){
     console.error(err);
     toast("Error loading data — check Firestore rules");
   });
-
+ 
   // Staff also need to see unclaimed (auto-imported, not yet claimed) entries
   if(!isAdmin){
     unclaimedUnsub = db.collection(COLLECTION).where("salesmanEmail","==",null).onSnapshot(snap=>{
@@ -1069,7 +1073,7 @@ function mergeAndRender(own, unclaimed){
   allEntries.sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
   renderEntries();
 }
-
+ 
 async function claimEntry(id){
   await db.collection(COLLECTION).doc(id).update({
     salesman: currentSalesmanName,
@@ -1077,7 +1081,7 @@ async function claimEntry(id){
   });
   toast("Claimed — it's now in your list");
 }
-
+ 
 // ---------- Per-entry photo upload (from Dashboard cards) ----------
 let photoEditEntryId = null;
 function getPhotos(e){
@@ -1108,16 +1112,16 @@ function triggerCameraPhoto(id){
 }
 document.getElementById("entry-photo-input").addEventListener("change", (e)=>handleEntryPhotos(e));
 document.getElementById("entry-photo-camera-input").addEventListener("change", (e)=>handleEntryPhotos(e));
-
+ 
 async function handleEntryPhotos(e){
   const files = Array.from(e.target.files || []);
   if(files.length === 0 || !photoEditEntryId) return;
-
+ 
   if(CLOUDINARY_CLOUD_NAME === "REPLACE_ME"){
     toast("Cloudinary not set up — see Setup instructions");
     return;
   }
-
+ 
   const entry = allEntries.find(x=>x.id===photoEditEntryId);
   const existing = entry ? getPhotos(entry) : [];
   const room = 3 - existing.length;
@@ -1130,7 +1134,7 @@ async function handleEntryPhotos(e){
   if(files.length > room){
     toast(`Only ${room} more photo${room===1?'':'s'} allowed (max 3 total) — extra ones skipped`);
   }
-
+ 
   const uploaded = [];
   for(const file of toUpload){
     toast(`Uploading photo ${existing.length + uploaded.length + 1}...`);
@@ -1141,18 +1145,18 @@ async function handleEntryPhotos(e){
       toast(`Photo "${file.name}" failed: ${result.error}`);
     }
   }
-
+ 
   if(uploaded.length){
     await db.collection(COLLECTION).doc(photoEditEntryId).update({
       photoUrls: [...existing, ...uploaded]
     });
     toast(`${uploaded.length} photo${uploaded.length===1?'':'s'} added ✓`);
   }
-
+ 
   e.target.value = ""; // reset so selecting the same file again still fires change
   photoEditEntryId = null;
 }
-
+ 
 function daysAgo(dateStr){
   const sale = new Date(dateStr + "T00:00:00");
   const today = new Date();
@@ -1165,7 +1169,7 @@ function isOverdue(entry){
 function isCritical(entry){
   return daysAgo(entry.saleDate) >= 3 && !["Packed","Delivered"].includes(entry.status);
 }
-
+ 
 // ---------- Alerts panel (Owner-only manual WhatsApp sending) ----------
 function whatsappLink(salesmanName, message){
   const phone = STAFF_PHONES[salesmanName];
@@ -1184,10 +1188,10 @@ function customerWhatsappLink(rawPhone, message){
   }
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
-
+ 
 function renderAlertsPanel(){
   const todayStr = new Date().toISOString().slice(0,10);
-
+ 
   // Populate salesman filter dropdown (once, then keep selection across re-renders)
   const filterSel = document.getElementById("alerts-salesman-filter");
   if(filterSel.options.length <= 1){
@@ -1199,7 +1203,7 @@ function renderAlertsPanel(){
   }
   const selectedSalesman = filterSel.value;
   const matchesFilter = e => !selectedSalesman || e.salesman === selectedSalesman;
-
+ 
   // Section 1: sold today, still not sent for finishing
   const notSent = allEntries.filter(e =>
     e.saleDate === todayStr && e.status === "Sold" && e.salesman && matchesFilter(e)
@@ -1223,7 +1227,7 @@ function renderAlertsPanel(){
         </div>`;
     }).join('');
   }
-
+ 
   // Section 2: critical/overdue -- needs a red alert
   const urgent = allEntries.filter(e => (isCritical(e) || isOverdue(e)) && e.salesman && matchesFilter(e));
   const alertList = document.getElementById("alert-list");
@@ -1246,7 +1250,7 @@ function renderAlertsPanel(){
         </div>`;
     }).join('');
   }
-
+ 
   // Section 3: full consolidated report for the selected salesman -- split into 3 parts
   const reportPreview = document.getElementById("full-report-preview");
   const reportSend = document.getElementById("full-report-send");
@@ -1255,22 +1259,22 @@ function renderAlertsPanel(){
     reportSend.innerHTML = '';
   } else {
     const theirActive = allEntries.filter(e => e.salesman === selectedSalesman && e.status !== "Delivered");
-
+ 
     const part1 = theirActive.filter(e => e.saleDate === todayStr && e.status === "Sold");
     const part2 = theirActive.filter(e => isOverdue(e) && !isCritical(e));
     const part3 = theirActive.filter(e => isCritical(e));
-
+ 
     const total = part1.length + part2.length + part3.length;
-
+ 
     if(total === 0){
       reportPreview.innerHTML = `<div class="empty" style="padding:16px;">${escapeHtml(selectedSalesman)} has nothing pending right now 🎉</div>`;
       reportSend.innerHTML = '';
     } else {
       const lineFor = e => `Inv #${e.invoice} — ${itemsSummaryPlain(e)}${e.customer ? ' — '+e.customer : ''}`;
-
+ 
       const msgParts = [];
       msgParts.push(`📊 BhabhiSarees — Report for ${selectedSalesman}`);
-
+ 
       if(part1.length){
         msgParts.push(`\n1️⃣ SOLD TODAY — NOT YET SENT FOR FINISHING (${part1.length}):\n` + part1.map(lineFor).join('\n'));
       }
@@ -1281,18 +1285,18 @@ function renderAlertsPanel(){
         msgParts.push(`\n3️⃣ 🔴 CRITICAL — NOT PACKED 3+ DAYS (${part3.length}):\n` + part3.map(e=>`${lineFor(e)} — ${daysAgo(e.saleDate)}d`).join('\n'));
       }
       const fullMsg = msgParts.join('\n');
-
+ 
       const previewSection = (title, list, color) => list.length ? `
         <div style="font-weight:700;color:${color};margin:10px 0 4px;">${title} (${list.length})</div>
         <div style="font-size:0.82rem;background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:8px 10px;">
           ${list.map(e=>`Inv #${escapeHtml(e.invoice)} — ${escapeHtml(itemsSummaryPlain(e))}<br>`).join('')}
         </div>` : '';
-
+ 
       reportPreview.innerHTML =
         previewSection("1️⃣ Sold today, not sent for finishing", part1, "var(--ink)") +
         previewSection("2️⃣ Not packed (2-3 days)", part2, "var(--overdue)") +
         previewSection("3️⃣ 🔴 Critical (3+ days)", part3, "var(--critical)");
-
+ 
       const link = whatsappLink(selectedSalesman, fullMsg);
       reportSend.innerHTML = link
         ? `<a href="${link}" target="_blank" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">📊 Send Full Report to ${escapeHtml(selectedSalesman)} (${total} item${total===1?'':'s'})</a>`
@@ -1300,7 +1304,7 @@ function renderAlertsPanel(){
     }
   }
 }
-
+ 
 function renderCustomerPanel(){
   // Ready for Delivery -- message the customer directly
   const readyForDelivery = allEntries.filter(e => e.status === "Packed" && e.phone);
@@ -1331,7 +1335,7 @@ function renderCustomerPanel(){
       <div id="queue-ready"></div>
       ${rows}`;
   }
-
+ 
   // Thank You -- goes out right after a purchase, any status, not just Delivered
   const thankable = allEntries
     .filter(e => e.phone)
@@ -1365,7 +1369,7 @@ function renderCustomerPanel(){
       ${rows}`;
   }
 }
-
+ 
 // Sequential send queue -- works on mobile because every WhatsApp open is
 // a genuine tap on a real link, not a scripted popup (which phones block).
 let sendQueues = {};
@@ -1396,28 +1400,30 @@ function advanceSendQueue(key){
   sendQueues[key].index++;
   renderSendQueue(key);
 }
-
+ 
 function itemsSummaryPlain(e){
   const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : ["item"]);
   return list.length === 1 ? list[0] : `${list[0]} +${list.length-1} more`;
 }
-
+ 
 function renderEntries(){
   const list = document.getElementById("entries-list");
   let filtered = allEntries;
-
+ 
   if(currentFilter === "overdue"){
     filtered = allEntries.filter(isOverdue);
   } else if(currentFilter === "critical"){
     filtered = allEntries.filter(isCritical);
   } else if(currentFilter === "unclaimed"){
     filtered = allEntries.filter(e=>!e.salesmanEmail);
+  } else if(currentFilter === "rau"){
+    filtered = allEntries.filter(e=>e.rauDelivery === true);
   } else if(currentFilter === "credit"){
     filtered = allEntries.filter(e=>e.creditAmount && e.creditAmount > 0);
   } else if(currentFilter !== "all"){
     filtered = allEntries.filter(e=>e.status === currentFilter);
   }
-
+ 
   if(searchQuery){
     filtered = filtered.filter(e=>{
       const invoiceMatch = (e.invoice || "").toLowerCase().includes(searchQuery);
@@ -1425,7 +1431,7 @@ function renderEntries(){
       return invoiceMatch || customerMatch;
     });
   }
-
+ 
   // Always newest-first: sale date, then invoice number as tiebreaker
   // (critical/overdue items are still highlighted visually and have their
   // own filter chips -- they just don't jump the queue in the main list)
@@ -1436,7 +1442,7 @@ function renderEntries(){
     const invB = parseInt(b.invoice) || 0;
     return invB - invA;
   });
-
+ 
   // stats
   const active = allEntries.filter(e=>!["Delivered"].includes(e.status));
   document.getElementById("stat-total").textContent = active.length;
@@ -1444,12 +1450,12 @@ function renderEntries(){
   document.getElementById("stat-critical").textContent = allEntries.filter(isCritical).length;
   const todayStr = new Date().toISOString().slice(0,10);
   document.getElementById("stat-today").textContent = allEntries.filter(e=>e.saleDate===todayStr).length;
-
+ 
   if(filtered.length === 0){
     list.innerHTML = `<div class="empty">No sarees in this view.</div>`;
     return;
   }
-
+ 
   list.innerHTML = filtered.map(e=>{
     const overdue = isOverdue(e);
     const critical = isCritical(e);
@@ -1477,6 +1483,7 @@ function renderEntries(){
           Salesman: <span>${e.salesman ? escapeHtml(e.salesman) : '📥 Unclaimed'}</span> · Sold: <span>${e.saleDate}</span>
           ${e.deliveryMethod ? `<br>Delivery: <span>${e.deliveryMethod}</span>` : ''}
         </div>
+        ${e.rauDelivery === true ? `<div style="display:inline-block;margin-top:6px;background:#E1EBF0;color:var(--delivered);font-weight:700;font-size:0.78rem;padding:4px 10px;border-radius:6px;">📍 RAU DELIVERY</div>` : ''}
         ${creditLineHtml(e)}
         ${getPhotos(e).length ? `<div class="entry-photos">${getPhotos(e).map((url,i)=>{
           const canRemove = (isAdmin || e.salesmanEmail === currentUserEmail || !e.salesmanEmail);
@@ -1491,7 +1498,7 @@ function renderEntries(){
     `;
   }).join("");
 }
-
+ 
 function nextActionButtons(e){
   const steps = ["Sold","Sent for Finishing","Packed","Delivered"];
   const idx = steps.indexOf(e.status);
@@ -1505,15 +1512,16 @@ function nextActionButtons(e){
       </label>
       <button class="primary" onclick="advanceStatus('${e.id}','${next}')">Mark ${next}</button>`;
   }
-
+ 
   btns += `<button onclick="triggerCameraPhoto('${e.id}')">📷 Take Photo (${getPhotos(e).length}/3)</button>`;
-
+ 
   btns += `
     <div class="more-actions">
       <button onclick="toggleMoreMenu('${e.id}')">⋯ More</button>
       <div class="more-menu" id="more-menu-${e.id}">
         <button onclick="editEntry('${e.id}'); toggleMoreMenu('${e.id}')">✏️ Edit details</button>
         <button onclick="triggerPhotoUpload('${e.id}'); toggleMoreMenu('${e.id}')">🖼️ Gallery Photo (${getPhotos(e).length}/3)</button>
+        <button onclick="toggleRauDelivery('${e.id}'); toggleMoreMenu('${e.id}')">📍 ${e.rauDelivery === true ? 'Remove Rau tag' : 'Mark for Rau Delivery'}</button>
         <select onchange="changeStatusDirect('${e.id}', this.value)">
           <option value="">↕ Change status...</option>
           ${steps.map(s=>`<option value="${s}" ${s===e.status?'disabled':''}>${s}</option>`).join('')}
@@ -1523,7 +1531,7 @@ function nextActionButtons(e){
     </div>`;
   return btns;
 }
-
+ 
 function toggleMoreMenu(id){
   const menu = document.getElementById(`more-menu-${id}`);
   const isOpen = menu.classList.contains("show");
@@ -1536,15 +1544,15 @@ document.addEventListener("click", (e)=>{
     document.querySelectorAll(".more-menu.show").forEach(m=>m.classList.remove("show"));
   }
 });
-
+ 
 async function deleteEntry(id){
   if(!isAdmin) return; // safety check — only Owner can ever reach this
   const e = allEntries.find(x=>x.id===id);
   if(!e) return;
-
+ 
   const pin = prompt(`Owner password required to delete:\n\nInvoice #${e.invoice} — ${(e.items||[e.item]).join(', ')}\n\nEnter your password to confirm:`);
   if(!pin) return;
-
+ 
   try{
     const credential = firebase.auth.EmailAuthProvider.credential(ADMIN_EMAIL, pin);
     await auth.currentUser.reauthenticateWithCredential(credential);
@@ -1552,11 +1560,11 @@ async function deleteEntry(id){
     toast("Wrong password — entry not deleted");
     return;
   }
-
+ 
   await db.collection(COLLECTION).doc(id).delete();
   toast("Entry deleted");
 }
-
+ 
 async function advanceStatus(id, newStatus){
   const checkbox = document.getElementById(`confirm-${id}`);
   if(!checkbox || !checkbox.checked){
@@ -1564,6 +1572,9 @@ async function advanceStatus(id, newStatus){
     return;
   }
   const updates = {status:newStatus};
+  if(newStatus === "Sent for Finishing"){
+    updates.rauDelivery = confirm("Is this saree going to the Rau delivery center?\n\nOK = Yes, going to Rau\nCancel = No");
+  }
   if(newStatus === "Delivered"){
     const method = prompt("Delivery method — type 'pickup' or 'porter':","pickup");
     if(method) updates.deliveryMethod = method;
@@ -1571,7 +1582,15 @@ async function advanceStatus(id, newStatus){
   await db.collection(COLLECTION).doc(id).update(updates);
   toast(`Marked as ${newStatus}`);
 }
-
+ 
+async function toggleRauDelivery(id){
+  const e = allEntries.find(x=>x.id===id);
+  if(!e) return;
+  const newValue = !(e.rauDelivery === true);
+  await db.collection(COLLECTION).doc(id).update({rauDelivery: newValue});
+  toast(newValue ? "Marked for Rau delivery" : "Rau delivery tag removed");
+}
+ 
 async function changeStatusDirect(id, newStatus){
   if(!newStatus) return;
   const e = allEntries.find(x=>x.id===id);
@@ -1583,7 +1602,7 @@ async function changeStatusDirect(id, newStatus){
   await db.collection(COLLECTION).doc(id).update({status: newStatus});
   toast(`Status changed to ${newStatus}`);
 }
-
+ 
 function editEntry(id){
   const e = allEntries.find(x=>x.id===id);
   if(!e) return;
@@ -1596,7 +1615,7 @@ function editEntry(id){
   db.collection(COLLECTION).doc(id).update({items: newItems, customer:newCustomer})
     .then(()=>toast("Updated"));
 }
-
+ 
 function escapeHtml(str){
   const d = document.createElement("div");
   d.textContent = str || "";
@@ -1653,3 +1672,36 @@ function creditLineHtml(e){
 </script>
 </body>
 </html>
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
