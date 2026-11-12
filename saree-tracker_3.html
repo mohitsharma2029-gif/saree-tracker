@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saree Sale Tracker — BhabhiSarees</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --ivory:#F7F1E8;
+    --maroon:#7A1F2B;
+    --maroon-dark:#5C1620;
+    --gold:#B8863B;
+    --ink:#2B211C;
+    --muted:#8A7A6D;
+    --line:#E4D9C8;
+    --card:#FFFFFF;
+    --sold:#8A7A6D;
+    --finishing:#B8863B;
+    --packed:#3F7A4E;
+    --delivered:#2B5C7A;
+    --overdue:#B33A3A;
+    --overdue-bg:#FBEAEA;
+    --critical:#7A0000;
+    --critical-bg:#F6D9D9;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--ivory);
+    color:var(--ink);
+    padding-bottom:60px;
+  }
+  header{
+    background:linear-gradient(135deg,var(--maroon),var(--maroon-dark));
+    color:var(--ivory);
+    padding:20px 16px 24px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    right:-40px; top:-40px;
+    width:160px; height:160px;
+    border:2px solid rgba(247,241,232,0.15);
+    border-radius:50%;
+  }
+  header h1{
+    margin:0;
+    font-size:1.35rem;
+    letter-spacing:0.3px;
+    font-weight:600;
+  }
+  header .sub{
+    margin-top:4px;
+    font-size:0.82rem;
+    color:rgba(247,241,232,0.75);
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:0 14px;
+  }
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin:-16px 0 16px;
+    position:relative;
+    z-index:2;
+  }
+  .tab-btn{
+    flex:1;
+    border:none;
+    padding:11px 8px;
+    border-radius:var(--radius);
+    background:var(--card);
+    color:var(--maroon);
+    font-weight:600;
+    font-size:0.85rem;
+    box-shadow:0 2px 8px rgba(90,30,30,0.12);
+    cursor:pointer;
+  }
+  .tab-btn.active{
+    background:var(--maroon);
+    color:var(--ivory);
+  }
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 1px 4px rgba(90,60,30,0.08);
+    border:1px solid var(--line);
+  }
+  label{
+    display:block;
+    font-size:0.78rem;
+    font-weight:600;
+    color:var(--muted);
+    margin:12px 0 4px;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=tel], input[type=date], select, textarea{
+    width:100%;
+    padding:10px 11px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:0.95rem;
+    background:#FFFDF9;
+    color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--gold);
+    outline-offset:1px;
+  }
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .hint{font-size:0.75rem;color:var(--muted);margin-top:4px;}
+
+  .btn{
+    display:inline-block;
+    border:none;
+    padding:12px 18px;
+    border-radius:8px;
+    font-weight:600;
+    font-size:0.92rem;
+    cursor:pointer;
+  }
+  .btn-primary{
+    background:var(--maroon);
+    color:var(--ivory);
+    width:100%;
+    margin-top:16px;
+  }
+  .btn-primary:active{background:var(--maroon-dark);}
+  .btn-secondary{
+    background:var(--ivory);
+    color:var(--maroon);
+    border:1px solid var(--maroon);
+  }
+
+  .photo-drop{
+    border:1.5px dashed var(--line);
+    border-radius:8px;
+    padding:14px;
+    text-align:center;
+    color:var(--muted);
+    font-size:0.85rem;
+    cursor:pointer;
+    background:#FFFDF9;
+  }
+  .photo-preview{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .photo-preview img{
+    width:64px; height:64px;
+    object-fit:cover;
+    border-radius:6px;
+    border:1px solid var(--line);
+  }
+  .upload-status{font-size:0.78rem;color:var(--gold);margin-top:6px;}
+
+  .filters{
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+    overflow-x:auto;
+    padding-bottom:2px;
+  }
+  .chip{
+    flex-shrink:0;
+    padding:7px 13px;
+    border-radius:999px;
+    background:var(--card);
+    border:1px solid var(--line);
+    font-size:0.8rem;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+  }
+  .chip.active{
+    background:var(--maroon);
+    color:var(--ivory);
+    border-color:var(--maroon);
+  }
+
+  .entry{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:13px 14px;
+    margin-bottom:10px;
+    border:1px solid var(--line);
+    border-left:4px solid var(--sold);
+  }
+  .entry.status-Sold{border-left-color:var(--sold);}
+  .entry.status-Sent-for-Finishing{border-left-color:var(--finishing);}
+  .entry.status-Packed{border-left-color:var(--packed);}
+  .entry.status-Delivered{border-left-color:var(--delivered);}
+  .entry.overdue{
+    border-left-color:var(--overdue);
+    background:var(--overdue-bg);
+  }
+  .entry.critical{
+    border-left-color:var(--critical);
+    background:var(--critical-bg);
+    border-left-width:6px;
+    animation:pulse-critical 2s ease-in-out infinite;
+  }
+  @keyframes pulse-critical{
+    0%,100%{box-shadow:0 0 0 0 rgba(122,0,0,0.15);}
+    50%{box-shadow:0 0 0 4px rgba(122,0,0,0.08);}
+  }
+  .entry-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .entry-title{font-weight:700; font-size:0.98rem;}
+  .entry-inv{font-size:0.78rem; color:var(--muted);}
+  .badge{
+    font-size:0.7rem;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:999px;
+    white-space:nowrap;
+    text-transform:uppercase;
+    letter-spacing:0.3px;
+  }
+  .badge-Sold{background:#EDE9E4;color:var(--sold);}
+  .badge-Sent-for-Finishing{background:#F5E9D5;color:var(--finishing);}
+  .badge-Packed{background:#E1F0E3;color:var(--packed);}
+  .badge-Delivered{background:#E1EBF0;color:var(--delivered);}
+  .overdue-flag{
+    display:inline-block;
+    margin-top:6px;
+    font-size:0.76rem;
+    font-weight:700;
+    color:var(--overdue);
+  }
+  .critical-flag{
+    display:inline-block;
+    margin-top:6px;
+    font-size:0.8rem;
+    font-weight:800;
+    color:var(--critical);
+    background:#fff;
+    padding:3px 9px;
+    border-radius:6px;
+    border:1.5px solid var(--critical);
+  }
+  .entry-meta{
+    font-size:0.83rem;
+    color:var(--ink);
+    margin-top:8px;
+    line-height:1.5;
+  }
+  .entry-meta span{color:var(--muted);}
+  .entry-photos{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .entry-photos img{width:44px;height:44px;object-fit:cover;border-radius:6px;}
+  .entry-actions{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .entry-actions button{
+    font-size:0.78rem;
+    padding:7px 11px;
+    border-radius:6px;
+    border:1px solid var(--line);
+    background:#FFFDF9;
+    color:var(--ink);
+    cursor:pointer;
+    font-weight:600;
+  }
+  .entry-actions button.primary{
+    background:var(--maroon);
+    color:var(--ivory);
+    border-color:var(--maroon);
+  }
+  .more-actions{position:relative; display:inline-block;}
+  .more-menu{
+    display:none;
+    position:absolute;
+    bottom:110%; left:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:8px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.15);
+    z-index:10;
+    min-width:190px;
+    overflow:hidden;
+  }
+  .more-menu.show{display:block;}
+  .more-menu button, .more-menu label{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:10px 14px;
+    border:none;
+    background:#fff;
+    font-size:0.82rem;
+    font-weight:600;
+    cursor:pointer;
+    border-bottom:1px solid var(--line);
+    color:var(--ink);
+  }
+  .more-menu button:last-child, .more-menu label:last-child{border-bottom:none;}
+  .more-menu select{
+    width:100%;
+    border:none;
+    padding:10px 14px;
+    font-size:0.82rem;
+    font-weight:600;
+    background:#fff;
+    border-bottom:1px solid var(--line);
+  }
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    padding:40px 10px;
+    font-size:0.9rem;
+  }
+  .summary-bar{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .stat{
+    flex:1;
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:10px;
+    text-align:center;
+    border:1px solid var(--line);
+  }
+  .stat .num{font-size:1.3rem;font-weight:700;color:var(--maroon);}
+  .stat.stat-overdue .num{color:var(--overdue);}
+  .stat .lbl{font-size:0.68rem;color:var(--muted);text-transform:uppercase;}
+  #toast{
+    position:fixed;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--ivory);
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:0.85rem;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s;
+    z-index:50;
+  }
+  #toast.show{opacity:1;}
+  select[multiple]{height:auto;}
+  .item-row{
+    display:flex;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .item-row input{flex:1;}
+  .item-row button{
+    flex-shrink:0;
+    background:#FBEAEA;
+    color:var(--overdue);
+    border:1px solid var(--overdue);
+    border-radius:8px;
+    padding:0 12px;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  #login-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .login-card{
+    background:var(--card);
+    border-radius:14px;
+    padding:28px 24px;
+    max-width:340px;
+    width:100%;
+    box-shadow:0 4px 20px rgba(90,30,30,0.12);
+    border:1px solid var(--line);
+  }
+  .login-card h2{
+    margin:0 0 4px;
+    color:var(--maroon);
+    font-size:1.2rem;
+  }
+  .login-card .login-sub{
+    font-size:0.8rem;
+    color:var(--muted);
+    margin-bottom:18px;
+  }
+  .login-error{
+    font-size:0.8rem;
+    color:var(--overdue);
+    margin-top:8px;
+    min-height:1em;
+  }
+  .logout-link{
+    background:none;
+    border:none;
+    color:rgba(247,241,232,0.85);
+    font-size:0.78rem;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+  .header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+  }
+  .who-badge{
+    display:inline-block;
+    background:rgba(247,241,232,0.15);
+    color:var(--ivory);
+    font-size:0.72rem;
+    font-weight:600;
+    padding:4px 10px;
+    border-radius:999px;
+    margin-top:6px;
+  }
+  .locked-field{
+    padding:10px 11px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#EFE7DA;
+    color:var(--ink);
+    font-size:0.95rem;
+    font-weight:600;
+  }
+  .entry-photos img{cursor:pointer;}
+  #photo-lightbox{
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(20,12,8,0.92);
+    z-index:200;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    cursor:zoom-out;
+  }
+  #photo-lightbox.show{display:flex;}
+  #photo-lightbox img{
+    max-width:100%;
+    max-height:90vh;
+    border-radius:8px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.5);
+  }
+  #photo-lightbox .lightbox-close{
+    position:absolute;
+    top:16px; right:20px;
+    color:#fff;
+    font-size:2rem;
+    font-weight:300;
+    cursor:pointer;
+    line-height:1;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h2>🧵 Saree Sale Tracker</h2>
+    <div class="login-sub">Sign in to see your invoices</div>
+    <label style="margin-top:0;">Your Name</label>
+    <select id="login-name">
+      <option value="">Select your name</option>
+    </select>
+    <label>PIN</label>
+    <input type="password" id="login-pin" placeholder="Enter your PIN" inputmode="numeric">
+    <button class="btn btn-primary" id="btn-login">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until signed in) -->
+<div id="app-content" style="display:none;">
+
+<header>
+  <div class="wrap">
+    <div class="header-top">
+      <div>
+        <h1>🧵 Saree Sale Tracker</h1>
+        <div class="sub">BhabhiSarees — sold → finishing → packed → delivered</div>
+      </div>
+      <button class="logout-link" id="btn-logout">Sign out</button>
+    </div>
+    <div class="who-badge" id="who-badge"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="new">+ New Sale</button>
+    <button class="tab-btn" data-tab="alerts" id="alerts-tab-btn" style="display:none;">📢 Alerts</button>
+    <button class="tab-btn" data-tab="customer" id="customer-tab-btn" style="display:none;">💌 Customer</button>
+  </div>
+
+  <!-- NEW SALE PANEL -->
+  <div class="panel" id="panel-new">
+    <div class="card">
+      <label>Invoice Number *</label>
+      <input type="text" id="f-invoice" placeholder="e.g. INV-1042">
+
+      <label>Sarees in this Invoice *</label>
+      <div id="items-list"></div>
+      <button type="button" class="btn btn-secondary" id="btn-add-item" style="width:100%;margin-bottom:4px;">+ Add another saree</button>
+      <div class="hint">Add one row per saree, with quantity — they'll all be tracked together under this invoice.</div>
+
+      <div class="row2">
+        <div>
+          <label>Customer Name <span style="text-transform:none;font-weight:400;">(optional)</span></label>
+          <input type="text" id="f-customer" placeholder="Customer name">
+        </div>
+        <div>
+          <label>Customer Phone <span style="text-transform:none;font-weight:400;">(optional)</span></label>
+          <input type="tel" id="f-phone" placeholder="10-digit number">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Salesman *</label>
+          <select id="f-salesman">
+            <option value="">Select salesman</option>
+          </select>
+          <div class="locked-field" id="f-salesman-locked" style="display:none;"></div>
+        </div>
+        <div>
+          <label>Sale Date *</label>
+          <input type="date" id="f-date">
+        </div>
+      </div>
+
+      <label>Photos (optional — up to 3)</label>
+      <div class="row2" style="margin-bottom:8px;">
+        <button type="button" class="btn btn-secondary" id="btn-take-photo" style="margin-top:0;">📷 Take Photo</button>
+        <button type="button" class="btn btn-secondary" id="btn-choose-gallery" style="margin-top:0;">🖼️ Gallery</button>
+      </div>
+      <input type="file" id="f-photo-camera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="f-photo" accept="image/*" multiple style="display:none;">
+      <div class="photo-preview" id="photo-preview"></div>
+      <div class="upload-status" id="upload-status"></div>
+
+      <div class="row2">
+        <div>
+          <label>Total Amount <span style="text-transform:none;font-weight:400;">(optional)</span></label>
+          <input type="text" id="f-total" placeholder="e.g. 22000" inputmode="decimal">
+        </div>
+        <div>
+          <label>Credit / Due Amount <span style="text-transform:none;font-weight:400;">(optional)</span></label>
+          <input type="text" id="f-credit" placeholder="e.g. 10000" inputmode="decimal">
+        </div>
+      </div>
+      <label>Credit Due Date <span style="text-transform:none;font-weight:400;">(optional — only if credit amount is filled)</span></label>
+      <input type="date" id="f-creditdate">
+
+      <button class="btn btn-primary" id="btn-save-sale">Save Sale</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD PANEL -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="summary-bar">
+      <div class="stat"><div class="num" id="stat-total">0</div><div class="lbl">Total Active</div></div>
+      <div class="stat stat-overdue"><div class="num" id="stat-overdue">0</div><div class="lbl">Overdue</div></div>
+      <div class="stat stat-overdue"><div class="num" id="stat-critical" style="color:var(--critical);">0</div><div class="lbl">🔴 Critical</div></div>
+      <div class="stat"><div class="num" id="stat-today">0</div><div class="lbl">Sold Today</div></div>
+    </div>
+    <input type="text" id="entry-search" placeholder="🔍 Search by invoice number or customer name" style="margin-bottom:12px;">
+    <div class="filters" id="status-filters">
+      <div class="chip active" data-filter="all">All</div>
+      <div class="chip" data-filter="critical">🔴 3+ Days</div>
+      <div class="chip" data-filter="unclaimed">📥 Unclaimed</div>
+      <div class="chip" data-filter="rau">📍 Rau Delivery</div>
+      <div class="chip" data-filter="credit">💰 Credit Due</div>
+      <div class="chip" data-filter="overdue">⚠ Overdue</div>
+      <div class="chip" data-filter="Sold">Sold</div>
+      <div class="chip" data-filter="Sent for Finishing">Sent for Finishing</div>
+      <div class="chip" data-filter="Packed">Packed</div>
+      <div class="chip" data-filter="Delivered">Delivered</div>
+    </div>
+    <div id="entries-list"></div>
+  </div>
+
+  <!-- ALERTS PANEL (Owner only) -->
+  <div class="panel" id="panel-alerts">
+    <div class="card">
+      <label style="margin-top:0;">Filter by salesman</label>
+      <select id="alerts-salesman-filter" onchange="renderAlertsPanel()">
+        <option value="">All salesmen</option>
+      </select>
+    </div>
+    <div class="card">
+      <label style="margin-top:0;">📋 Not sent for finishing yet — today's sales</label>
+      <div class="hint" style="margin-bottom:10px;">Anyone who sold a saree today and hasn't marked it "Sent for Finishing" yet shows here.</div>
+      <div id="reminder-list"></div>
+    </div>
+    <div class="card">
+      <label style="margin-top:0;">🔴 Critical &amp; Overdue — needs a red alert</label>
+      <div class="hint" style="margin-bottom:10px;">Anything not packed for 2+ days. Send a direct urgent message to the salesman.</div>
+      <div id="alert-list"></div>
+    </div>
+    <div class="card">
+      <label style="margin-top:0;">📊 Full Report — one consolidated message</label>
+      <div class="hint" style="margin-bottom:10px;">Pick a salesman above — one WhatsApp message with 3 clear sections: sold today (not sent for finishing), not packed 2-3 days, and 🔴 critical (3+ days).</div>
+      <div id="full-report-preview"></div>
+      <div id="full-report-send"></div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER MESSAGES PANEL (Owner only) -->
+  <div class="panel" id="panel-customer">
+    <div class="card">
+      <label style="margin-top:0;">📦 Ready for Delivery — message the customer</label>
+      <div class="hint" style="margin-bottom:10px;">Packed sarees where the customer's phone number was saved — let them know it's ready.</div>
+      <div id="ready-list"></div>
+    </div>
+    <div class="card">
+      <label style="margin-top:0;">🙏 Thank You — message the customer</label>
+      <div class="hint" style="margin-bottom:10px;">Every sale with a saved customer number — send a thank-you note with a rating request, right after purchase.</div>
+      <div id="thankyou-list"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-content -->
+
+<div id="toast"></div>
+<div id="photo-lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+  <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+  <button id="lightbox-remove-btn" onclick="event.stopPropagation(); removeCurrentLightboxPhoto()" style="display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--overdue);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">🗑 Remove This Photo</button>
+</div>
+<input type="file" id="entry-photo-input" accept="image/*" multiple style="display:none;">
+<input type="file" id="entry-photo-camera-input" accept="image/*" capture="environment" style="display:none;">
+
+<script>
+/* =========================================================
+   1. FIREBASE CONFIG — REPLACE THIS BLOCK WITH YOUR OWN
+   Firebase console → gear icon → Project settings →
+   "Your apps" → copy the firebaseConfig object here.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBGPmZBf0pXsY4JyaO9XuMeNCYzxuljG70",
+  authDomain: "bhabhi-saree-delivery.firebaseapp.com",
+  projectId: "bhabhi-saree-delivery",
+  storageBucket: "bhabhi-saree-delivery.firebasestorage.app",
+  messagingSenderId: "811532483442",
+  appId: "1:811532483442:web:a7943254c500a53d7b3beb"
+};
+
+/* =========================================================
+   2. CLOUDINARY CONFIG — REPLACE WITH YOUR OWN (free account)
+   cloudinary.com → Dashboard → Cloud name
+   Settings → Upload → Add an "unsigned" upload preset → paste its name
+   ========================================================= */
+const CLOUDINARY_CLOUD_NAME = "icufvyxp";
+const CLOUDINARY_UPLOAD_PRESET = "gwsh26gf";
+
+/* ========================================================= */
+
+// Uploads one file to Cloudinary. Retries once automatically on
+// failure (network drop / mobile signal), waiting briefly before
+// retrying. Returns {url} on success or {error} on failure.
+// Shrinks a phone photo (often 8-20 MB) down to roughly 200-500 KB
+// before uploading. Keeps it sharp enough to inspect a saree, but makes
+// uploads fast, avoids "file too large" errors, and saves storage.
+async function compressImage(file, maxDim = 1600, quality = 0.82){
+  try{
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
+    if(bitmap.close) bitmap.close();
+    const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", quality));
+    if(!blob || blob.size >= file.size) return file; // never make it bigger
+    const baseName = (file.name || "photo").replace(/\.\w+$/, "");
+    return new File([blob], baseName + ".jpg", { type: "image/jpeg" });
+  } catch(err){
+    return file; // if the browser can't compress, upload the original
+  }
+}
+
+// Cloudinary can resize on the fly just by changing the link.
+// Thumbnails load a tiny version; the full-screen view loads a medium one.
+function thumbUrl(url, size = 200){
+  if(!url || !url.includes("/upload/")) return url;
+  return url.replace("/upload/", `/upload/c_fill,w_${size},h_${size},q_auto,f_auto/`);
+}
+function bigUrl(url){
+  if(!url || !url.includes("/upload/")) return url;
+  return url.replace("/upload/", "/upload/c_limit,w_1400,q_auto,f_auto/");
+}
+
+async function uploadPhotoWithRetry(file, attempt = 1){
+  if(attempt === 1){
+    file = await compressImage(file);
+  }
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  try{
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: "POST", body: formData
+    });
+    const data = await res.json();
+    if(data.secure_url){
+      return { url: data.secure_url };
+    }
+    const serverMsg = (data && data.error && data.error.message) ? data.error.message : "Unknown error";
+    if(attempt < 2){
+      await new Promise(r => setTimeout(r, 1500));
+      return uploadPhotoWithRetry(file, attempt + 1);
+    }
+    return { error: serverMsg };
+  } catch(err){
+    if(attempt < 2){
+      await new Promise(r => setTimeout(r, 1500));
+      return uploadPhotoWithRetry(file, attempt + 1);
+    }
+    return { error: "Connection failed — check internet signal" };
+  }
+}
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+const COLLECTION = "sareeSales";
+
+const EMAIL_DOMAIN = "@bhabhisareestracker.app";
+const ADMIN_EMAIL = "mohit" + EMAIL_DOMAIN;
+const DEFAULT_STAFF = ["Jitu","Vicky","Hitesh","Chotu","Manish","Purab"];
+const STAFF_PHONES = {
+  "Jitu": "917987851780",
+  "Vicky": "918319450134",
+  "Hitesh": "919009707726",
+  "Chotu": "917869197110",
+  "Manish": "919109554065",
+  "Purab": "918827055435"
+};
+
+let allEntries = [];
+let currentFilter = "all";
+let searchQuery = "";
+let renderLimit = 40;
+let pendingPhotoUrls = [];
+let currentUserEmail = null;
+let currentSalesmanName = null;
+let isAdmin = false;
+let unsubscribeListener = null;
+
+// ---------- Tabs ----------
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+    if(btn.dataset.tab === "dashboard") renderEntries();
+    if(btn.dataset.tab === "alerts") renderAlertsPanel();
+    if(btn.dataset.tab === "customer") renderCustomerPanel();
+  });
+});
+
+// ---------- Toast ----------
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+// ---------- Default sale date to today ----------
+document.getElementById("f-date").valueAsDate = new Date();
+
+// ---------- Multi-item rows ----------
+let itemRowCount = 0;
+function addItemRow(value, qty){
+  itemRowCount++;
+  const div = document.createElement("div");
+  div.className = "item-row";
+  div.innerHTML = `
+    <input type="text" class="f-item-input" placeholder="e.g. Rani Pink Banarasi Silk" value="${value ? escapeHtml(value) : ''}" style="flex:3;">
+    <input type="number" class="f-item-qty" placeholder="Qty" min="1" value="${qty || 1}" style="flex:1;min-width:60px;">
+    <button type="button" onclick="removeItemRow(this)">✕</button>
+  `;
+  document.getElementById("items-list").appendChild(div);
+}
+function removeItemRow(btn){
+  const list = document.getElementById("items-list");
+  if(list.children.length > 1){
+    btn.parentElement.remove();
+  }
+}
+document.getElementById("btn-add-item").addEventListener("click", ()=>addItemRow());
+addItemRow(); // start with one row
+
+// ---------- Salesman list (fixed list, edit DEFAULT_STAFF above to change) ----------
+function loadStaffList(){
+  const sel = document.getElementById("f-salesman");
+  sel.innerHTML = '<option value="">Select salesman</option>';
+  DEFAULT_STAFF.forEach(n=>{
+    const opt = document.createElement("option");
+    opt.value = n; opt.textContent = n;
+    sel.appendChild(opt);
+  });
+
+  const loginSel = document.getElementById("login-name");
+  loginSel.innerHTML = '<option value="">Select your name</option>';
+  DEFAULT_STAFF.forEach(n=>{
+    const opt = document.createElement("option");
+    opt.value = n; opt.textContent = n;
+    loginSel.appendChild(opt);
+  });
+  const ownerOpt = document.createElement("option");
+  ownerOpt.value = "__admin__"; ownerOpt.textContent = "Owner (Mohit)";
+  loginSel.appendChild(ownerOpt);
+}
+loadStaffList();
+
+// ---------- Login ----------
+document.getElementById("btn-login").addEventListener("click", ()=>{
+  const name = document.getElementById("login-name").value;
+  const pin = document.getElementById("login-pin").value;
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "";
+
+  if(!name || !pin){
+    errEl.textContent = "Please select your name and enter your PIN.";
+    return;
+  }
+  const email = name === "__admin__" ? ADMIN_EMAIL : (name.toLowerCase() + EMAIL_DOMAIN);
+
+  auth.signInWithEmailAndPassword(email, pin).catch(err=>{
+    errEl.textContent = "Wrong PIN or account not set up yet.";
+    console.error(err);
+  });
+});
+
+document.getElementById("btn-logout").addEventListener("click", ()=>{
+  auth.signOut();
+});
+
+// ---------- Auth state ----------
+auth.onAuthStateChanged(user=>{
+  if(unsubscribeListener){ unsubscribeListener(); unsubscribeListener = null; }
+  if(unclaimedUnsub){ unclaimedUnsub(); unclaimedUnsub = null; }
+
+  if(user){
+    currentUserEmail = user.email;
+    isAdmin = (currentUserEmail === ADMIN_EMAIL);
+    currentSalesmanName = isAdmin ? null : capitalize(currentUserEmail.split("@")[0]);
+
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app-content").style.display = "block";
+    document.getElementById("who-badge").textContent = isAdmin
+      ? "Signed in as Owner — viewing all salesmen"
+      : "Signed in as " + currentSalesmanName;
+    document.getElementById("alerts-tab-btn").style.display = isAdmin ? "" : "none";
+    document.getElementById("customer-tab-btn").style.display = isAdmin ? "" : "none";
+
+    // Lock or show salesman field on New Sale form
+    const dropdown = document.getElementById("f-salesman");
+    const locked = document.getElementById("f-salesman-locked");
+    if(isAdmin){
+      dropdown.style.display = "";
+      locked.style.display = "none";
+    } else {
+      dropdown.style.display = "none";
+      locked.style.display = "block";
+      locked.textContent = currentSalesmanName;
+    }
+
+    attachListener();
+  } else {
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("app-content").style.display = "none";
+    document.getElementById("login-pin").value = "";
+  }
+});
+
+function capitalize(s){
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// ---------- Photo upload (Cloudinary unsigned) ----------
+document.getElementById("btn-take-photo").addEventListener("click", ()=>{
+  document.getElementById("f-photo-camera").click();
+});
+document.getElementById("btn-choose-gallery").addEventListener("click", ()=>{
+  document.getElementById("f-photo").click();
+});
+document.getElementById("f-photo-camera").addEventListener("change", (e)=>handleNewSalePhotos(e));
+document.getElementById("f-photo").addEventListener("change", (e)=>handleNewSalePhotos(e));
+
+async function handleNewSalePhotos(e){
+  const files = Array.from(e.target.files || []);
+  if(files.length === 0) return;
+  const statusEl = document.getElementById("upload-status");
+
+  if(CLOUDINARY_CLOUD_NAME === "REPLACE_ME"){
+    statusEl.textContent = "Cloudinary not set up yet — photos will be skipped. See Setup tab.";
+    statusEl.style.color = "#B33A3A";
+    return;
+  }
+
+  const room = 3 - pendingPhotoUrls.length;
+  if(room <= 0){
+    statusEl.textContent = "Already have 3 photos — remove one first to add another.";
+    statusEl.style.color = "#B33A3A";
+    return;
+  }
+  const toUpload = files.slice(0, room);
+  if(files.length > room){
+    toast(`Only ${room} more photo${room===1?'':'s'} allowed (max 3 total) — extra ones skipped`);
+  }
+
+  for(const file of toUpload){
+    statusEl.textContent = `Uploading photo ${pendingPhotoUrls.length + 1}...`;
+    statusEl.style.color = "";
+    const result = await uploadPhotoWithRetry(file);
+    if(result.url){
+      pendingPhotoUrls.push(result.url);
+      renderPhotoPreview();
+    } else {
+      statusEl.textContent = `Photo "${file.name}" failed to upload: ${result.error}`;
+      statusEl.style.color = "#B33A3A";
+    }
+  }
+  statusEl.textContent = `${pendingPhotoUrls.length}/3 photo${pendingPhotoUrls.length===1?'':'s'} uploaded ✓`;
+  e.target.value = "";
+}
+
+function renderPhotoPreview(){
+  document.getElementById("photo-preview").innerHTML = pendingPhotoUrls.map((url,i)=>`
+    <div style="position:relative;">
+      <img src="${thumbUrl(url)}" loading="lazy" onclick="openLightbox('${url}')">
+      <button type="button" onclick="removePendingPhoto(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--overdue);color:#fff;border:none;font-size:0.75rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+  `).join('');
+}
+function removePendingPhoto(index){
+  pendingPhotoUrls.splice(index, 1);
+  renderPhotoPreview();
+  document.getElementById("upload-status").textContent = `${pendingPhotoUrls.length}/3 photo${pendingPhotoUrls.length===1?'':'s'} uploaded`;
+}
+
+// ---------- Save new sale ----------
+document.getElementById("btn-save-sale").addEventListener("click", async ()=>{
+  const invoice = document.getElementById("f-invoice").value.trim();
+  const itemRows = Array.from(document.querySelectorAll(".item-row"));
+  const items = itemRows.map(row=>{
+    const name = row.querySelector(".f-item-input").value.trim();
+    const qty = Number(row.querySelector(".f-item-qty").value) || 1;
+    if(!name) return null;
+    return qty > 1 ? `${name} ×${qty}` : name;
+  }).filter(Boolean);
+  const customer = document.getElementById("f-customer").value.trim();
+  const phone = document.getElementById("f-phone").value.trim();
+  const salesman = isAdmin ? document.getElementById("f-salesman").value : currentSalesmanName;
+  const saleDate = document.getElementById("f-date").value;
+  const totalAmount = document.getElementById("f-total").value.trim();
+  const creditAmount = document.getElementById("f-credit").value.trim();
+  const creditDue = document.getElementById("f-creditdate").value;
+
+  if(!invoice || items.length === 0 || !salesman || !saleDate){
+    toast("Please fill invoice number, at least one saree, and salesman");
+    return;
+  }
+
+  // Prevent duplicate invoice numbers -- never silently overwrite an existing entry
+  const btn = document.getElementById("btn-save-sale");
+  btn.disabled = true; btn.textContent = "Checking invoice...";
+  try{
+    const dupCheck = await db.collection(COLLECTION).where("invoice","==",invoice).limit(1).get();
+    if(!dupCheck.empty){
+      const existing = dupCheck.docs[0].data();
+      toast(`Invoice #${invoice} already exists (${existing.salesman || 'Unclaimed'}) — use a different number or edit that entry instead`);
+      btn.disabled = false; btn.textContent = "Save Sale";
+      return;
+    }
+  } catch(err){
+    console.error(err);
+  }
+
+  // salesmanEmail: which login this sale belongs to, for access control.
+  // Admin picking a salesman from the dropdown still tags it to that salesman's own login.
+  const salesmanEmail = isAdmin ? (salesman.toLowerCase() + EMAIL_DOMAIN) : currentUserEmail;
+
+  btn.textContent = "Saving...";
+
+  try{
+    await db.collection(COLLECTION).add({
+      invoice, items, customer: customer || null, phone: phone || null,
+      salesman, salesmanEmail, saleDate,
+      status: "Sold",
+      photoUrls: pendingPhotoUrls,
+      deliveryMethod: null,
+      totalAmount: totalAmount ? Number(totalAmount) : null,
+      creditAmount: creditAmount ? Number(creditAmount) : null,
+      creditDue: creditDue || null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast("Sale saved ✓");
+    // reset form
+    document.getElementById("f-invoice").value = "";
+    document.getElementById("items-list").innerHTML = "";
+    addItemRow();
+    document.getElementById("f-customer").value = "";
+    document.getElementById("f-phone").value = "";
+    if(isAdmin) document.getElementById("f-salesman").value = "";
+    document.getElementById("f-date").valueAsDate = new Date();
+    document.getElementById("photo-preview").innerHTML = "";
+    document.getElementById("upload-status").textContent = "";
+    document.getElementById("f-total").value = "";
+    document.getElementById("f-credit").value = "";
+    document.getElementById("f-creditdate").value = "";
+    pendingPhotoUrls = [];
+  } catch(err){
+    toast("Error saving — check Firebase setup");
+    console.error(err);
+  }
+  btn.disabled = false; btn.textContent = "Save Sale";
+});
+
+// ---------- Dashboard: filters ----------
+document.getElementById("status-filters").addEventListener("click", (e)=>{
+  if(!e.target.classList.contains("chip")) return;
+  document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
+  e.target.classList.add("active");
+  currentFilter = e.target.dataset.filter;
+  renderLimit = 40;
+  renderEntries();
+});
+
+document.getElementById("entry-search").addEventListener("input", (e)=>{
+  searchQuery = e.target.value.trim().toLowerCase();
+  renderLimit = 40;
+  renderEntries();
+});
+
+// ---------- Live listener (attached after login, filtered by role) ----------
+let unclaimedUnsub = null;
+function attachListener(){
+  let query = db.collection(COLLECTION);
+  if(!isAdmin){
+    query = query.where("salesmanEmail","==",currentUserEmail);
+  }
+  unsubscribeListener = query.onSnapshot(snap=>{
+    const own = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    if(isAdmin){
+      allEntries = own;
+      allEntries.sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
+      renderEntries();
+    } else {
+      mergeAndRender(own, lastUnclaimed);
+    }
+  }, err=>{
+    console.error(err);
+    toast("Error loading data — check Firestore rules");
+  });
+
+  // Staff also need to see unclaimed (auto-imported, not yet claimed) entries
+  if(!isAdmin){
+    unclaimedUnsub = db.collection(COLLECTION).where("salesmanEmail","==",null).onSnapshot(snap=>{
+      lastUnclaimed = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      mergeAndRender(lastOwn, lastUnclaimed);
+    });
+  }
+}
+let lastOwn = [];
+let lastUnclaimed = [];
+function mergeAndRender(own, unclaimed){
+  lastOwn = own;
+  lastUnclaimed = unclaimed;
+  const map = new Map();
+  own.forEach(e=>map.set(e.id, e));
+  unclaimed.forEach(e=>map.set(e.id, e));
+  allEntries = Array.from(map.values());
+  allEntries.sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate));
+  renderEntries();
+}
+
+async function claimEntry(id){
+  await db.collection(COLLECTION).doc(id).update({
+    salesman: currentSalesmanName,
+    salesmanEmail: currentUserEmail
+  });
+  toast("Claimed — it's now in your list");
+}
+
+// ---------- Per-entry photo upload (from Dashboard cards) ----------
+let photoEditEntryId = null;
+function getPhotos(e){
+  if(e.photoUrls && e.photoUrls.length) return e.photoUrls;
+  if(e.photoUrl) return [e.photoUrl]; // backward compat with older single-photo entries
+  return [];
+}
+async function removeEntryPhoto(id, index){
+  const e = allEntries.find(x=>x.id===id);
+  if(!e) return;
+  const photos = getPhotos(e);
+  const ok = confirm("Remove this photo?");
+  if(!ok) return;
+  const updated = photos.filter((_,i)=>i!==index);
+  await db.collection(COLLECTION).doc(id).update({
+    photoUrls: updated,
+    photoUrl: null // clear the old single-photo field too, in case this entry predates the array format
+  });
+  toast("Photo removed");
+}
+function triggerPhotoUpload(id){
+  photoEditEntryId = id;
+  document.getElementById("entry-photo-input").click();
+}
+function triggerCameraPhoto(id){
+  photoEditEntryId = id;
+  document.getElementById("entry-photo-camera-input").click();
+}
+document.getElementById("entry-photo-input").addEventListener("change", (e)=>handleEntryPhotos(e));
+document.getElementById("entry-photo-camera-input").addEventListener("change", (e)=>handleEntryPhotos(e));
+
+async function handleEntryPhotos(e){
+  const files = Array.from(e.target.files || []);
+  if(files.length === 0 || !photoEditEntryId) return;
+
+  if(CLOUDINARY_CLOUD_NAME === "REPLACE_ME"){
+    toast("Cloudinary not set up — see Setup instructions");
+    return;
+  }
+
+  const entry = allEntries.find(x=>x.id===photoEditEntryId);
+  const existing = entry ? getPhotos(entry) : [];
+  const room = 3 - existing.length;
+  if(room <= 0){
+    toast("This invoice already has 3 photos — remove one first (Edit) to add another");
+    photoEditEntryId = null;
+    return;
+  }
+  const toUpload = files.slice(0, room);
+  if(files.length > room){
+    toast(`Only ${room} more photo${room===1?'':'s'} allowed (max 3 total) — extra ones skipped`);
+  }
+
+  const uploaded = [];
+  for(const file of toUpload){
+    toast(`Uploading photo ${existing.length + uploaded.length + 1}...`);
+    const result = await uploadPhotoWithRetry(file);
+    if(result.url){
+      uploaded.push(result.url);
+    } else {
+      toast(`Photo "${file.name}" failed: ${result.error}`);
+    }
+  }
+
+  if(uploaded.length){
+    await db.collection(COLLECTION).doc(photoEditEntryId).update({
+      photoUrls: [...existing, ...uploaded]
+    });
+    toast(`${uploaded.length} photo${uploaded.length===1?'':'s'} added ✓`);
+  }
+
+  e.target.value = ""; // reset so selecting the same file again still fires change
+  photoEditEntryId = null;
+}
+
+function daysAgo(dateStr){
+  const sale = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return Math.floor((today - sale) / 86400000);
+}
+function isOverdue(entry){
+  return daysAgo(entry.saleDate) >= 2 && !["Packed","Delivered"].includes(entry.status);
+}
+function isCritical(entry){
+  return daysAgo(entry.saleDate) >= 3 && !["Packed","Delivered"].includes(entry.status);
+}
+
+// ---------- Alerts panel (Owner-only manual WhatsApp sending) ----------
+function whatsappLink(salesmanName, message){
+  const phone = STAFF_PHONES[salesmanName];
+  if(!phone) return null;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+function customerWhatsappLink(rawPhone, message){
+  if(!rawPhone) return null;
+  let digits = rawPhone.replace(/\D/g, "");
+  if(digits.length === 10){
+    digits = "91" + digits;
+  } else if(digits.length === 11 && digits.startsWith("0")){
+    digits = "91" + digits.slice(1);
+  } else if(digits.length < 10){
+    return null; // too short to be a real number
+  }
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
+function renderAlertsPanel(){
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  // Populate salesman filter dropdown (once, then keep selection across re-renders)
+  const filterSel = document.getElementById("alerts-salesman-filter");
+  if(filterSel.options.length <= 1){
+    DEFAULT_STAFF.forEach(name=>{
+      const opt = document.createElement("option");
+      opt.value = name; opt.textContent = name;
+      filterSel.appendChild(opt);
+    });
+  }
+  const selectedSalesman = filterSel.value;
+  const matchesFilter = e => !selectedSalesman || e.salesman === selectedSalesman;
+
+  // Section 1: sold today, still not sent for finishing
+  const notSent = allEntries.filter(e =>
+    e.saleDate === todayStr && e.status === "Sold" && e.salesman && matchesFilter(e)
+  );
+  const reminderList = document.getElementById("reminder-list");
+  if(notSent.length === 0){
+    reminderList.innerHTML = `<div class="empty" style="padding:16px;">Everyone has sent today's sarees for finishing 🎉</div>`;
+  } else {
+    reminderList.innerHTML = notSent.map(e=>{
+      const itemText = itemsSummaryPlain(e);
+      const msg = `Hi ${e.salesman}, reminder from BhabhiSarees — please send today's saree (Invoice #${e.invoice}, ${itemText}) for finishing. Thank you!`;
+      const link = whatsappLink(e.salesman, msg);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
+          <div>
+            <div style="font-weight:700;">${escapeHtml(e.salesman)} — Invoice #${escapeHtml(e.invoice)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)}</div>
+          </div>
+          ${link ? `<a href="${link}" target="_blank" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;padding:8px 14px;">📱 Send</a>`
+                 : `<span style="font-size:0.75rem;color:var(--overdue);">No phone number saved</span>`}
+        </div>`;
+    }).join('');
+  }
+
+  // Section 2: critical/overdue -- needs a red alert
+  const urgent = allEntries.filter(e => (isCritical(e) || isOverdue(e)) && e.salesman && matchesFilter(e));
+  const alertList = document.getElementById("alert-list");
+  if(urgent.length === 0){
+    alertList.innerHTML = `<div class="empty" style="padding:16px;">Nothing overdue right now 👍</div>`;
+  } else {
+    alertList.innerHTML = urgent.map(e=>{
+      const da = daysAgo(e.saleDate);
+      const itemText = itemsSummaryPlain(e);
+      const msg = `🔴 URGENT — BhabhiSarees\nHi ${e.salesman}, Invoice #${e.invoice} (${itemText}) sold ${da} days ago is STILL NOT PACKED. Please action this immediately today.`;
+      const link = whatsappLink(e.salesman, msg);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
+          <div>
+            <div style="font-weight:700;color:${isCritical(e) ? 'var(--critical)' : 'var(--overdue)'};">${escapeHtml(e.salesman)} — Invoice #${escapeHtml(e.invoice)} (${da}d)</div>
+            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)}</div>
+          </div>
+          ${link ? `<a href="${link}" target="_blank" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;padding:8px 14px;color:var(--overdue);border-color:var(--overdue);">🔴 Send Alert</a>`
+                 : `<span style="font-size:0.75rem;color:var(--overdue);">No phone number saved</span>`}
+        </div>`;
+    }).join('');
+  }
+
+  // Section 3: full consolidated report for the selected salesman -- split into 3 parts
+  const reportPreview = document.getElementById("full-report-preview");
+  const reportSend = document.getElementById("full-report-send");
+  if(!selectedSalesman){
+    reportPreview.innerHTML = `<div class="hint">Select a salesman above to build their report.</div>`;
+    reportSend.innerHTML = '';
+  } else {
+    const theirActive = allEntries.filter(e => e.salesman === selectedSalesman && e.status !== "Delivered");
+
+    const part1 = theirActive.filter(e => e.saleDate === todayStr && e.status === "Sold");
+    const part2 = theirActive.filter(e => isOverdue(e) && !isCritical(e));
+    const part3 = theirActive.filter(e => isCritical(e));
+
+    const total = part1.length + part2.length + part3.length;
+
+    if(total === 0){
+      reportPreview.innerHTML = `<div class="empty" style="padding:16px;">${escapeHtml(selectedSalesman)} has nothing pending right now 🎉</div>`;
+      reportSend.innerHTML = '';
+    } else {
+      const lineFor = e => `Inv #${e.invoice} — ${itemsSummaryPlain(e)}${e.customer ? ' — '+e.customer : ''}`;
+
+      const msgParts = [];
+      msgParts.push(`📊 BhabhiSarees — Report for ${selectedSalesman}`);
+
+      if(part1.length){
+        msgParts.push(`\n1️⃣ SOLD TODAY — NOT YET SENT FOR FINISHING (${part1.length}):\n` + part1.map(lineFor).join('\n'));
+      }
+      if(part2.length){
+        msgParts.push(`\n2️⃣ NOT PACKED (2-3 DAYS) (${part2.length}):\n` + part2.map(e=>`${lineFor(e)} — ${daysAgo(e.saleDate)}d`).join('\n'));
+      }
+      if(part3.length){
+        msgParts.push(`\n3️⃣ 🔴 CRITICAL — NOT PACKED 3+ DAYS (${part3.length}):\n` + part3.map(e=>`${lineFor(e)} — ${daysAgo(e.saleDate)}d`).join('\n'));
+      }
+      const fullMsg = msgParts.join('\n');
+
+      const previewSection = (title, list, color) => list.length ? `
+        <div style="font-weight:700;color:${color};margin:10px 0 4px;">${title} (${list.length})</div>
+        <div style="font-size:0.82rem;background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:8px 10px;">
+          ${list.map(e=>`Inv #${escapeHtml(e.invoice)} — ${escapeHtml(itemsSummaryPlain(e))}<br>`).join('')}
+        </div>` : '';
+
+      reportPreview.innerHTML =
+        previewSection("1️⃣ Sold today, not sent for finishing", part1, "var(--ink)") +
+        previewSection("2️⃣ Not packed (2-3 days)", part2, "var(--overdue)") +
+        previewSection("3️⃣ 🔴 Critical (3+ days)", part3, "var(--critical)");
+
+      const link = whatsappLink(selectedSalesman, fullMsg);
+      reportSend.innerHTML = link
+        ? `<a href="${link}" target="_blank" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">📊 Send Full Report to ${escapeHtml(selectedSalesman)} (${total} item${total===1?'':'s'})</a>`
+        : `<div style="color:var(--overdue);font-size:0.8rem;margin-top:8px;">No phone number saved for ${escapeHtml(selectedSalesman)}</div>`;
+    }
+  }
+}
+
+function renderCustomerPanel(){
+  // Ready for Delivery -- message the customer directly
+  const readyForDelivery = allEntries.filter(e => e.status === "Packed" && e.phone);
+  const readyList = document.getElementById("ready-list");
+  if(readyForDelivery.length === 0){
+    readyList.innerHTML = `<div class="empty" style="padding:16px;">No packed sarees with a saved customer number right now.</div>`;
+  } else {
+    const readyQueue = [];
+    const rows = readyForDelivery.map(e=>{
+      const itemText = itemsSummaryPlain(e);
+      const msg = `Hi ${e.customer || ''}, good news from BhabhiSarees! Your saree (Invoice #${e.invoice}, ${itemText}) is ready. Please let us know when you'd like to collect it or if you'd like it sent via porter. Thank you!`;
+      const link = customerWhatsappLink(e.phone, msg);
+      if(link) readyQueue.push({name: e.customer || 'Customer', link});
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
+          <div>
+            <div style="font-weight:700;">${escapeHtml(e.customer || 'Customer')} — Invoice #${escapeHtml(e.invoice)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)} · ${escapeHtml(e.phone)}</div>
+          </div>
+          ${link ? `<a href="${link}" target="_blank" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;padding:8px 14px;">📦 Send</a>`
+                 : `<span style="font-size:0.75rem;color:var(--overdue);">Invalid number</span>`}
+        </div>`;
+    }).join('');
+    readyList.innerHTML = `
+      <button onclick='startSendQueue("ready", ${JSON.stringify(readyQueue).replace(/'/g, "&#39;")})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
+        📦 Send to All ${readyQueue.length} (one at a time)
+      </button>
+      <div id="queue-ready"></div>
+      ${rows}`;
+  }
+
+  // Thank You -- goes out right after a purchase, any status, not just Delivered
+  const thankable = allEntries
+    .filter(e => e.phone)
+    .sort((a,b)=> new Date(b.saleDate) - new Date(a.saleDate))
+    .slice(0, 60);
+  const thankyouList = document.getElementById("thankyou-list");
+  if(thankable.length === 0){
+    thankyouList.innerHTML = `<div class="empty" style="padding:16px;">No sales with a saved customer number right now.</div>`;
+  } else {
+    const thankQueue = [];
+    const rows = thankable.map(e=>{
+      const itemText = itemsSummaryPlain(e);
+      const ratingUrl = `https://mohitsharma2029-gif.github.io/saree-tracker/rating.html?inv=${encodeURIComponent(e.invoice)}`;
+      const msg = `Hi ${e.customer || ''}, thank you so much for shopping with BhabhiSarees! 🙏 We hope you love your saree (Invoice #${e.invoice}, ${itemText}). We'd love to hear how we did — tap here to rate us: ${ratingUrl}\n\nWe look forward to serving you again soon!`;
+      const link = customerWhatsappLink(e.phone, msg);
+      if(link) thankQueue.push({name: e.customer || 'Customer', link});
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;">
+          <div>
+            <div style="font-weight:700;">${escapeHtml(e.customer || 'Customer')} — Invoice #${escapeHtml(e.invoice)}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">${escapeHtml(itemText)} · ${escapeHtml(e.phone)} · Sold ${e.saleDate}</div>
+          </div>
+          ${link ? `<a href="${link}" target="_blank" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;padding:8px 14px;">🙏 Send</a>`
+                 : `<span style="font-size:0.75rem;color:var(--overdue);">Invalid number</span>`}
+        </div>`;
+    }).join('');
+    thankyouList.innerHTML = `
+      <button onclick='startSendQueue("thank", ${JSON.stringify(thankQueue).replace(/'/g, "&#39;")})' class="btn btn-secondary" style="width:100%;margin-bottom:10px;">
+        🙏 Send to All ${thankQueue.length} (one at a time)
+      </button>
+      <div id="queue-thank"></div>
+      ${rows}`;
+  }
+}
+
+// Sequential send queue -- works on mobile because every WhatsApp open is
+// a genuine tap on a real link, not a scripted popup (which phones block).
+let sendQueues = {};
+function startSendQueue(key, queue){
+  sendQueues[key] = { items: queue, index: 0 };
+  renderSendQueue(key);
+}
+function renderSendQueue(key){
+  const state = sendQueues[key];
+  const container = document.getElementById(`queue-${key}`);
+  if(!state || state.index >= state.items.length){
+    if(container) container.innerHTML = state ? `<div class="hint" style="color:var(--gold);font-weight:700;">✓ All done!</div>` : '';
+    return;
+  }
+  const current = state.items[state.index];
+  container.innerHTML = `
+    <div class="card" style="background:var(--ivory);margin-bottom:10px;">
+      <div style="font-weight:700;margin-bottom:8px;">Sending ${state.index + 1} of ${state.items.length}: ${escapeHtml(current.name)}</div>
+      <a href="${current.link}" target="_blank" onclick="advanceSendQueue('${key}')" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;">
+        Tap to Open WhatsApp for ${escapeHtml(current.name)}
+      </a>
+      <div class="hint" style="margin-top:8px;">After sending, come back here and tap Next.</div>
+      <button onclick="advanceSendQueue('${key}')" class="btn btn-secondary" style="width:100%;margin-top:8px;">Next ▶</button>
+    </div>`;
+}
+function advanceSendQueue(key){
+  if(!sendQueues[key]) return;
+  sendQueues[key].index++;
+  renderSendQueue(key);
+}
+
+function itemsSummaryPlain(e){
+  const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : ["item"]);
+  return list.length === 1 ? list[0] : `${list[0]} +${list.length-1} more`;
+}
+
+function renderEntries(){
+  const list = document.getElementById("entries-list");
+  let filtered = allEntries;
+
+  if(currentFilter === "overdue"){
+    filtered = allEntries.filter(isOverdue);
+  } else if(currentFilter === "critical"){
+    filtered = allEntries.filter(isCritical);
+  } else if(currentFilter === "unclaimed"){
+    filtered = allEntries.filter(e=>!e.salesmanEmail);
+  } else if(currentFilter === "rau"){
+    filtered = allEntries.filter(e=>e.rauDelivery === true);
+  } else if(currentFilter === "credit"){
+    filtered = allEntries.filter(e=>e.creditAmount && e.creditAmount > 0);
+  } else if(currentFilter !== "all"){
+    filtered = allEntries.filter(e=>e.status === currentFilter);
+  }
+
+  if(searchQuery){
+    filtered = filtered.filter(e=>{
+      const invoiceMatch = (e.invoice || "").toLowerCase().includes(searchQuery);
+      const customerMatch = (e.customer || "").toLowerCase().includes(searchQuery);
+      return invoiceMatch || customerMatch;
+    });
+  }
+
+  // Always newest-first: sale date, then invoice number as tiebreaker
+  // (critical/overdue items are still highlighted visually and have their
+  // own filter chips -- they just don't jump the queue in the main list)
+  filtered = [...filtered].sort((a,b)=>{
+    const dateDiff = new Date(b.saleDate) - new Date(a.saleDate);
+    if(dateDiff !== 0) return dateDiff;
+    const invA = parseInt(a.invoice) || 0;
+    const invB = parseInt(b.invoice) || 0;
+    return invB - invA;
+  });
+
+  // stats
+  const active = allEntries.filter(e=>!["Delivered"].includes(e.status));
+  document.getElementById("stat-total").textContent = active.length;
+  document.getElementById("stat-overdue").textContent = allEntries.filter(isOverdue).length;
+  document.getElementById("stat-critical").textContent = allEntries.filter(isCritical).length;
+  const todayStr = new Date().toISOString().slice(0,10);
+  document.getElementById("stat-today").textContent = allEntries.filter(e=>e.saleDate===todayStr).length;
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="empty">No sarees in this view.</div>`;
+    return;
+  }
+
+  const visibleEntries = filtered.slice(0, renderLimit);
+  const remaining = filtered.length - visibleEntries.length;
+
+  list.innerHTML = visibleEntries.map(e=>{
+    const overdue = isOverdue(e);
+    const critical = isCritical(e);
+    const statusClass = e.status.replace(/ /g,"-");
+    const da = daysAgo(e.saleDate);
+    let flagHtml = '';
+    if(critical){
+      flagHtml = `<div class="critical-flag">🔴 URGENT — not packed for ${da} days</div>`;
+    } else if(overdue){
+      flagHtml = `<div class="overdue-flag">⚠ Not packed — ${da} day${da===1?'':'s'} since sale</div>`;
+    }
+    return `
+      <div class="entry status-${statusClass} ${critical?'critical':(overdue?'overdue':'')}">
+        <div class="entry-top">
+          <div>
+            <div class="entry-title">${itemsSummary(e)}</div>
+            <div class="entry-inv">Invoice #${escapeHtml(e.invoice)} · <b style="color:var(--ink);">${totalQty(e)} saree${totalQty(e)===1?'':'s'}</b>${(e.totalAmount !== undefined && e.totalAmount !== null) ? ` · <b style="color:var(--ink);">₹${Number(e.totalAmount).toLocaleString('en-IN')}</b>` : ''}</div>
+          </div>
+          <span class="badge badge-${statusClass}">${e.status}</span>
+        </div>
+        ${flagHtml}
+        ${(e.items && e.items.length > 1) ? `<div class="entry-meta" style="margin-top:6px;">${e.items.map(i=>'• '+escapeHtml(i)).join('<br>')}</div>` : ''}
+        <div class="entry-meta">
+          ${e.customer ? `Customer: <span>${escapeHtml(e.customer)}</span>` : ''}${e.customer && e.phone ? ' · ' : ''}${e.phone ? escapeHtml(e.phone) : ''}${(e.customer || e.phone) ? '<br>' : ''}
+          Salesman: <span>${e.salesman ? escapeHtml(e.salesman) : '📥 Unclaimed'}</span> · Sold: <span>${e.saleDate}</span>
+          ${e.deliveryMethod ? `<br>Delivery: <span>${e.deliveryMethod}</span>` : ''}
+        </div>
+        ${e.rauDelivery === true ? `<div style="display:inline-block;margin-top:6px;background:#E1EBF0;color:var(--delivered);font-weight:700;font-size:0.78rem;padding:4px 10px;border-radius:6px;">📍 RAU DELIVERY</div>` : ''}
+        ${creditLineHtml(e)}
+        ${getPhotos(e).length ? `<div class="entry-photos">${getPhotos(e).map((url,i)=>{
+          const canRemove = (isAdmin || e.salesmanEmail === currentUserEmail || !e.salesmanEmail);
+          return `<img src="${thumbUrl(url)}" loading="lazy" onclick="openLightbox('${url}', '${e.id}', ${i}, ${canRemove})">`;
+        }).join('')}</div>` : ''}
+        <div class="entry-actions">
+          ${!e.salesmanEmail && !isAdmin
+            ? `<button class="primary" onclick="claimEntry('${e.id}')">This one is mine</button><button onclick="triggerCameraPhoto('${e.id}')">📷 Take Photo (${getPhotos(e).length}/3)</button><button onclick="triggerPhotoUpload('${e.id}')">🖼️ Gallery</button>`
+            : nextActionButtons(e)}
+        </div>
+      </div>
+    `;
+  }).join("") + (remaining > 0
+    ? `<button onclick="showMoreEntries()" class="btn btn-secondary" style="width:100%;margin:6px 0 20px;">Show ${Math.min(40, remaining)} more (${remaining} remaining)</button>`
+    : '');
+}
+function showMoreEntries(){
+  renderLimit += 40;
+  renderEntries();
+}
+
+function nextActionButtons(e){
+  const steps = ["Sold","Sent for Finishing","Packed","Delivered"];
+  const idx = steps.indexOf(e.status);
+  let btns = "";
+  if(idx < steps.length - 1){
+    const next = steps[idx+1];
+    btns += `
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;">
+        <input type="checkbox" id="confirm-${e.id}" style="width:16px;height:16px;">
+        Confirm
+      </label>
+      <button class="primary" onclick="advanceStatus('${e.id}','${next}')">Mark ${next}</button>`;
+  }
+
+  btns += `<button onclick="triggerCameraPhoto('${e.id}')">📷 Take Photo (${getPhotos(e).length}/3)</button>`;
+
+  btns += `
+    <div class="more-actions">
+      <button onclick="toggleMoreMenu('${e.id}')">⋯ More</button>
+      <div class="more-menu" id="more-menu-${e.id}">
+        <button onclick="editEntry('${e.id}'); toggleMoreMenu('${e.id}')">✏️ Edit details</button>
+        <button onclick="triggerPhotoUpload('${e.id}'); toggleMoreMenu('${e.id}')">🖼️ Gallery Photo (${getPhotos(e).length}/3)</button>
+        <button onclick="toggleRauDelivery('${e.id}'); toggleMoreMenu('${e.id}')">📍 ${e.rauDelivery === true ? 'Remove Rau tag' : 'Mark for Rau Delivery'}</button>
+        <select onchange="changeStatusDirect('${e.id}', this.value)">
+          <option value="">↕ Change status...</option>
+          ${steps.map(s=>`<option value="${s}" ${s===e.status?'disabled':''}>${s}</option>`).join('')}
+        </select>
+        ${isAdmin ? `<button onclick="deleteEntry('${e.id}')" style="color:var(--overdue);">🗑 Delete</button>` : ''}
+      </div>
+    </div>`;
+  return btns;
+}
+
+function toggleMoreMenu(id){
+  const menu = document.getElementById(`more-menu-${id}`);
+  const isOpen = menu.classList.contains("show");
+  document.querySelectorAll(".more-menu.show").forEach(m=>m.classList.remove("show"));
+  if(!isOpen) menu.classList.add("show");
+}
+// Close any open "More" menu when tapping elsewhere on the page
+document.addEventListener("click", (e)=>{
+  if(!e.target.closest(".more-actions")){
+    document.querySelectorAll(".more-menu.show").forEach(m=>m.classList.remove("show"));
+  }
+});
+
+async function deleteEntry(id){
+  if(!isAdmin) return; // safety check — only Owner can ever reach this
+  const e = allEntries.find(x=>x.id===id);
+  if(!e) return;
+
+  const pin = prompt(`Owner password required to delete:\n\nInvoice #${e.invoice} — ${(e.items||[e.item]).join(', ')}\n\nEnter your password to confirm:`);
+  if(!pin) return;
+
+  try{
+    const credential = firebase.auth.EmailAuthProvider.credential(ADMIN_EMAIL, pin);
+    await auth.currentUser.reauthenticateWithCredential(credential);
+  } catch(err){
+    toast("Wrong password — entry not deleted");
+    return;
+  }
+
+  await db.collection(COLLECTION).doc(id).delete();
+  toast("Entry deleted");
+}
+
+async function advanceStatus(id, newStatus){
+  const checkbox = document.getElementById(`confirm-${id}`);
+  if(!checkbox || !checkbox.checked){
+    toast("Please tick the Confirm box first");
+    return;
+  }
+  const updates = {status:newStatus};
+  if(newStatus === "Sent for Finishing"){
+    updates.rauDelivery = confirm("Is this saree going to the Rau delivery center?\n\nOK = Yes, going to Rau\nCancel = No");
+  }
+  if(newStatus === "Delivered"){
+    const method = prompt("Delivery method — type 'pickup' or 'porter':","pickup");
+    if(method) updates.deliveryMethod = method;
+  }
+  await db.collection(COLLECTION).doc(id).update(updates);
+  toast(`Marked as ${newStatus}`);
+}
+
+async function toggleRauDelivery(id){
+  const e = allEntries.find(x=>x.id===id);
+  if(!e) return;
+  const newValue = !(e.rauDelivery === true);
+  await db.collection(COLLECTION).doc(id).update({rauDelivery: newValue});
+  toast(newValue ? "Marked for Rau delivery" : "Rau delivery tag removed");
+}
+
+async function changeStatusDirect(id, newStatus){
+  if(!newStatus) return;
+  const e = allEntries.find(x=>x.id===id);
+  const ok = confirm(`Change status from "${e ? e.status : ''}" to "${newStatus}"?\n\nUse this to fix a mistake — e.g. if the wrong status was tapped by accident.`);
+  if(!ok){
+    renderEntries(); // reset the dropdown back to its placeholder
+    return;
+  }
+  await db.collection(COLLECTION).doc(id).update({status: newStatus});
+  toast(`Status changed to ${newStatus}`);
+}
+
+function editEntry(id){
+  const e = allEntries.find(x=>x.id===id);
+  if(!e) return;
+  const currentItems = (e.items && e.items.length) ? e.items.join(", ") : (e.item || "");
+  const newItemsStr = prompt("Sarees in this invoice (separate multiple with commas):", currentItems);
+  if(newItemsStr === null) return;
+  const newItems = newItemsStr.split(",").map(s=>s.trim()).filter(Boolean);
+  const newCustomer = prompt("Customer name:", e.customer);
+  if(newCustomer === null) return;
+  db.collection(COLLECTION).doc(id).update({items: newItems, customer:newCustomer})
+    .then(()=>toast("Updated"));
+}
+
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str || "";
+  return d.innerHTML;
+}
+let lightboxEntryId = null;
+let lightboxIndex = null;
+function openLightbox(url, entryId, index, canRemove){
+  document.getElementById("lightbox-img").src = bigUrl(url);
+  document.getElementById("photo-lightbox").classList.add("show");
+  lightboxEntryId = entryId || null;
+  lightboxIndex = (index !== undefined) ? index : null;
+  document.getElementById("lightbox-remove-btn").style.display =
+    (canRemove && lightboxEntryId !== null) ? "block" : "none";
+}
+function closeLightbox(){
+  document.getElementById("photo-lightbox").classList.remove("show");
+  lightboxEntryId = null;
+  lightboxIndex = null;
+}
+async function removeCurrentLightboxPhoto(){
+  if(lightboxEntryId === null || lightboxIndex === null) return;
+  await removeEntryPhoto(lightboxEntryId, lightboxIndex);
+  closeLightbox();
+}
+function itemsSummary(e){
+  const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : ["Unknown item"]);
+  if(list.length === 1) return escapeHtml(list[0]);
+  return escapeHtml(list[0]) + ` <span style="color:var(--muted);font-weight:400;font-size:0.82em;">+${list.length-1} more</span>`;
+}
+function totalQty(e){
+  const list = (e.items && e.items.length) ? e.items : (e.item ? [e.item] : []);
+  if(list.length === 0) return 0;
+  return list.reduce((sum, item)=>{
+    const match = item.match(/×(\d+)\s*$/);
+    return sum + (match ? Number(match[1]) : 1);
+  }, 0);
+}
+function creditLineHtml(e){
+  if(!e.creditAmount || e.creditAmount <= 0) return '';
+  const amt = "₹" + Number(e.creditAmount).toLocaleString('en-IN');
+  let dueText = e.creditDue ? `due ${e.creditDue}` : 'due date not set';
+  let overdueCredit = false;
+  if(e.creditDue){
+    const due = new Date(e.creditDue + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    overdueCredit = due < today;
+  }
+  const style = overdueCredit
+    ? 'color:var(--overdue);font-weight:700;'
+    : 'color:var(--gold);font-weight:600;';
+  return `<div style="margin-top:6px;font-size:0.83rem;${style}">💰 Credit: ${amt} — ${dueText}${overdueCredit ? ' (OVERDUE)' : ''}</div>`;
+}
+</script>
+</body>
+</html>
